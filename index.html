@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EcoHabits</title>
+<meta name="description" content="Күнделікті эко-тапсырмалар орындап, XP жинап, өз орманыңды өсір.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          moss: { 50:'#f1f6f1', 100:'#dfeadf', 200:'#bfd5c0', 600:'#2e7a4a', 700:'#256240', 800:'#1c4d33', 900:'#133524' },
+          sun:  { 100:'#fdf0c4', 400:'#f4c430', 500:'#e5ad0a' },
+          ink:  '#17231c'
+        },
+        fontFamily: { sans: ['"PT Sans"', 'system-ui', 'sans-serif'] }
+      }
+    }
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer components {
+    .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 py-2 font-bold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700 disabled:cursor-not-allowed disabled:opacity-60; }
+    .btn-primary { @apply bg-moss-700 text-white hover:bg-moss-800; }
+    .btn-ghost { @apply border border-moss-200 bg-white text-ink hover:bg-moss-50; }
+    .field { @apply block w-full min-h-[44px] rounded-lg border border-moss-200 bg-white px-3 py-2 text-ink placeholder:text-ink/50 focus:border-moss-700 focus:outline focus:outline-2 focus:outline-moss-700; }
+    .card { @apply rounded-xl border border-moss-200 bg-white; }
+  }
+</style>
+<style>
+  html { scroll-behavior: smooth; }
+  .plant { line-height: 1; transform-origin: 50% 100%; animation: sway 5s ease-in-out infinite; transition: font-size .6s cubic-bezier(.2,.8,.2,1); }
+  .plant.grow { animation: grow .9s cubic-bezier(.2,.8,.2,1), sway 5s ease-in-out .9s infinite; }
+  @keyframes sway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+  @keyframes grow { from { transform: scale(.2); opacity: .2; } 60% { transform: scale(1.12); } to { transform: scale(1); opacity: 1; } }
+  @keyframes xpfloat { from { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } to { opacity: 0; transform: translateY(-80px); } }
+  .xp-float.run { animation: xpfloat 1.6s ease-out forwards; }
+  .bar-fill { transition: width .8s cubic-bezier(.2,.8,.2,1); }
+  .spinner { width: 18px; height: 18px; border: 3px solid #bfd5c0; border-top-color: #256240; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  ::selection { background: #f4c430; color: #17231c; }
+  @media (prefers-reduced-motion: reduce) {
+    .plant, .plant.grow, .xp-float.run, .spinner { animation: none; }
+    * { transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+
+<body class="bg-moss-50 font-sans text-ink antialiased">
+<a href="#main" class="sr-only rounded bg-white px-3 py-2 focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50">Мазмұнға өту</a>
+
+<!-- Бапталмаған Supabase ескертуі -->
+<div id="config-warning" class="hidden min-h-screen place-items-center p-6">
+  <div class="card max-w-lg p-6">
+    <h1 class="text-xl font-bold">Supabase бапталмаған</h1>
+    <p class="mt-2 text-ink/80">index.html ішіндегі <code class="rounded bg-moss-100 px-1">CONFIG.SUPABASE_URL</code> және <code class="rounded bg-moss-100 px-1">CONFIG.SUPABASE_ANON_KEY</code> мәндерін өз жобаңның деректерімен ауыстыр. Деректерді Supabase → Project Settings → API бөлімінен аласың.</p>
+  </div>
+</div>
+
+<div id="boot" class="grid min-h-screen place-items-center">
+  <div class="flex items-center gap-3 text-ink/80"><span class="spinner" aria-hidden="true"></span> Жүктелуде…</div>
+</div>
+
+<!-- ============ КІРУ / ТІРКЕЛУ ============ -->
+<section id="auth-view" class="hidden min-h-screen lg:grid lg:grid-cols-2" aria-label="Кіру және тіркелу">
+  <div class="bg-moss-900 p-8 text-white lg:p-14">
+    <div class="flex items-center gap-2 text-xl font-bold"><span data-icon="leaf" data-class="h-7 w-7 text-sun-400"></span> EcoHabits</div>
+    <h1 class="mt-10 max-w-md text-3xl font-bold leading-tight lg:text-4xl" style="text-wrap: balance">Күніне бір эко-тапсырма. Дән біртіндеп орманға айналады.</h1>
+    <p class="mt-4 max-w-md text-white/80">Тапсырманы орында, фотоесеп жібер, XP жина. XP көбейген сайын өсімдігің келесі деңгейге өтеді.</p>
+    <ol id="auth-ladder" class="mt-10 grid max-w-md gap-3"></ol>
+  </div>
+
+  <div class="flex items-center justify-center p-6 lg:p-14">
+    <div class="w-full max-w-sm">
+      <div role="tablist" aria-label="Кіру немесе тіркелу" class="grid grid-cols-2 rounded-lg bg-moss-100 p-1">
+        <button id="tab-login" role="tab" aria-selected="true" class="min-h-[44px] rounded-md font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700">Кіру</button>
+        <button id="tab-signup" role="tab" aria-selected="false" class="min-h-[44px] rounded-md font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700">Тіркелу</button>
+      </div>
+
+      <h2 id="auth-title" class="mt-6 text-2xl font-bold">Аккаунтқа кіру</h2>
+
+      <button id="btn-google" type="button" class="btn btn-ghost mt-5 w-full">
+        <svg viewBox="0 0 48 48" class="h-5 w-5" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Google арқылы кіру
+      </button>
+
+      <div class="my-5 flex items-center gap-3 text-sm text-ink/70" aria-hidden="true"><span class="h-px flex-1 bg-moss-200"></span>немесе<span class="h-px flex-1 bg-moss-200"></span></div>
+
+      <form id="auth-form" novalidate class="space-y-4">
+        <div>
+          <label for="f-email" class="mb-1 block font-bold">Email</label>
+          <input id="f-email" class="field" type="email" autocomplete="email" required placeholder="aidar@mail.kz">
+        </div>
+        <div id="wrap-username" class="hidden">
+          <label for="f-username" class="mb-1 block font-bold">Ник (username)</label>
+          <input id="f-username" class="field" type="text" autocomplete="username" maxlength="20" placeholder="eco_aidar" aria-describedby="username-hint">
+          <p id="username-hint" class="mt-1 text-sm text-ink/70">3–20 символ: кіші латын әріптері, сан және _</p>
+        </div>
+        <div>
+          <label for="f-password" class="mb-1 block font-bold">Құпиясөз</label>
+          <input id="f-password" class="field" type="password" autocomplete="current-password" required minlength="8" aria-describedby="password-hint">
+          <p id="password-hint" class="mt-1 hidden text-sm text-ink/70">Кемінде 8 символ</p>
+        </div>
+        <p id="auth-msg" class="min-h-[1.25rem] text-sm" role="alert"></p>
+        <button id="auth-submit" type="submit" class="btn btn-primary w-full">Кіру</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ҚОСЫМША ============ -->
+<div id="app-view" class="hidden">
+  <header class="sticky top-0 z-30 border-b border-moss-200 bg-white">
+    <div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-2">
+      <div class="flex items-center gap-2 text-lg font-bold"><span data-icon="leaf" data-class="h-6 w-6 text-moss-700"></span> EcoHabits</div>
+      <nav id="nav-desktop" class="ml-6 hidden gap-1 md:flex" aria-label="Негізгі мәзір"></nav>
+      <div class="ml-auto flex items-center gap-3">
+        <div class="hidden text-right leading-tight sm:block">
+          <div id="chip-name" class="max-w-[10rem] truncate font-bold"></div>
+          <div class="text-sm text-ink/70"><span id="chip-streak"></span> · <span id="chip-xp"></span></div>
+        </div>
+        <button id="btn-logout" class="btn btn-ghost" aria-label="Шығу"><span data-icon="logout" data-class="h-5 w-5"></span><span class="hidden sm:inline">Шығу</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="mx-auto max-w-6xl px-4 pb-28 pt-6 md:pb-10">
+
+    <!-- Басты бет -->
+    <section id="route-home" class="hidden space-y-6">
+      <h1 id="home-title" tabindex="-1" class="text-2xl font-bold outline-none"></h1>
+      <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <div class="card overflow-hidden">
+          <div id="plant-scene" class="relative h-72 overflow-hidden bg-[#e6f1ea]">
+            <div class="absolute right-8 top-6 h-14 w-14 rounded-full bg-sun-400" aria-hidden="true"></div>
+            <div id="xp-float" class="xp-float absolute inset-x-0 bottom-40 text-center text-2xl font-bold text-moss-800 opacity-0" aria-hidden="true">+50 XP</div>
+            <div class="absolute inset-x-0 bottom-0 h-16 bg-[#6b4f35]" aria-hidden="true"></div>
+            <div class="absolute bottom-[3.1rem] left-1/2 h-4 w-40 -translate-x-1/2 rounded-full bg-black/25" aria-hidden="true"></div>
+            <div class="absolute inset-x-0 bottom-12 flex justify-center">
+              <div id="plant-emoji" class="plant" role="img" aria-label="Өсімдік"></div>
+            </div>
+          </div>
+          <div class="space-y-4 p-5">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="plant-name" class="text-xl font-bold"></h2>
+              <p class="font-bold text-moss-700"><span id="plant-xp">0</span> XP</p>
+            </div>
+            <p id="plant-desc" class="text-ink/80"></p>
+            <div>
+              <div id="xp-bar" class="h-3 overflow-hidden rounded-full bg-moss-100" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Келесі деңгейге дейінгі прогресс">
+                <div id="xp-fill" class="bar-fill h-full rounded-full bg-moss-600" style="width:0%"></div>
+              </div>
+              <p id="xp-next" class="mt-2 text-sm text-ink/80"></p>
+            </div>
+            <ol id="plant-ladder" class="grid grid-cols-6 gap-1 pt-1 text-center" aria-label="Өсу деңгейлері"></ol>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="card p-5">
+            <p class="text-sm font-bold uppercase tracking-wide text-ink/70">Серия</p>
+            <p class="mt-1 text-4xl font-bold"><span aria-hidden="true">🔥</span> <span id="stat-streak">0</span> <span class="text-xl">күн</span></p>
+            <p id="stat-streak-note" class="mt-1 text-sm text-ink/80"></p>
+          </div>
+          <div class="card p-5">
+            <p class="text-sm font-bold uppercase tracking-wide text-ink/70">Бүгінгі тапсырмалар</p>
+            <p class="mt-1 text-2xl font-bold"><span id="stat-today">0</span> / <span id="stat-total">0</span></p>
+            <a href="#/quests" class="btn btn-primary mt-3 w-full">Тапсырмаға өту</a>
+          </div>
+          <div class="card p-5">
+            <p class="text-sm font-bold uppercase tracking-wide text-ink/70">Рейтингтегі орның</p>
+            <p class="mt-1 text-2xl font-bold">#<span id="stat-rank">–</span></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Тапсырмалар -->
+    <section id="route-quests" class="hidden space-y-5">
+      <div>
+        <h1 tabindex="-1" class="text-2xl font-bold outline-none">Бүгінгі тапсырмалар</h1>
+        <p class="mt-1 text-ink/80">Әр тапсырма үшін +50 XP. Күніне кемінде біреуін орындасаң, серия бір күнге артады. Бір тәулік бос өтсе, серия нөлге түседі.</p>
+      </div>
+      <p class="font-bold">Орындалды: <span id="quests-count">0</span> / <span id="quests-total">0</span></p>
+      <ul id="quest-list" class="grid gap-4 md:grid-cols-2"></ul>
+    </section>
+
+    <!-- Рейтинг -->
+    <section id="route-leaderboard" class="hidden space-y-5">
+      <div>
+        <h1 tabindex="-1" class="text-2xl font-bold outline-none">Үздік қолданушылар</h1>
+        <p class="mt-1 text-ink/80">XP бойынша алғашқы 50 қолданушы. Өз жолың бөлек түспен көрсетіледі.</p>
+      </div>
+      <div class="card overflow-hidden">
+        <table class="w-full text-left">
+          <caption class="sr-only">XP бойынша қолданушылар рейтингі</caption>
+          <thead class="bg-moss-100 text-sm">
+            <tr>
+              <th scope="col" class="w-14 px-3 py-3">#</th>
+              <th scope="col" class="px-3 py-3">Қолданушы</th>
+              <th scope="col" class="px-3 py-3">Серия</th>
+              <th scope="col" class="px-3 py-3 text-right">XP</th>
+              <th scope="col" class="px-3 py-3">Мәртебе</th>
+            </tr>
+          </thead>
+          <tbody id="lb-body"></tbody>
+          <tfoot id="lb-foot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- Марапаттар -->
+    <section id="route-store" class="hidden space-y-5">
+      <div>
+        <h1 tabindex="-1" class="text-2xl font-bold outline-none">Марапаттар дүкені</h1>
+        <p class="mt-3 text-2xl font-bold">Жақында…</p>
+        <p class="text-xs text-ink/70">Жұмыстастық күтеміз!</p>
+      </div>
+      <ul class="grid gap-4 md:grid-cols-3">
+        <li class="card flex flex-col gap-3 p-5">
+          <span data-icon="gift" data-class="h-8 w-8 text-moss-700"></span>
+          <h2 class="text-lg font-bold">Серіктес дүкендердің промокодтары</h2>
+          <p class="text-ink/80">XP-ді жеңілдік кодына айырбастайсың.</p>
+          <button class="btn btn-ghost mt-auto" disabled aria-disabled="true"><span data-icon="lock" data-class="h-4 w-4"></span> Жақында…</button>
+        </li>
+        <li class="card flex flex-col gap-3 p-5">
+          <span data-icon="bag" data-class="h-8 w-8 text-moss-700"></span>
+          <h2 class="text-lg font-bold">Эко-шоппер сөмкесі</h2>
+          <p class="text-ink/80">Матадан тігілген нақты сөмке үйіңе жеткізіледі.</p>
+          <button class="btn btn-ghost mt-auto" disabled aria-disabled="true"><span data-icon="lock" data-class="h-4 w-4"></span> Жақында…</button>
+        </li>
+        <li class="card flex flex-col gap-3 p-5">
+          <span data-icon="leaf" data-class="h-8 w-8 text-moss-700"></span>
+          <h2 class="text-lg font-bold">Ағаш отырғызу сертификаты</h2>
+          <p class="text-ink/80">Атыңа ағаш отырғызылып, сертификат беріледі.</p>
+          <button class="btn btn-ghost mt-auto" disabled aria-disabled="true"><span data-icon="lock" data-class="h-4 w-4"></span> Жақында…</button>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <nav id="nav-mobile" class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-moss-200 bg-white md:hidden" aria-label="Төменгі мәзір"></nav>
+</div>
+
+<!-- Ник таңдау (Google-мен кіргендерге) -->
+<div id="name-modal" class="fixed inset-0 z-50 hidden place-items-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="name-title">
+  <form id="name-form" class="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" novalidate>
+    <h2 id="name-title" class="text-xl font-bold">Ник таңда</h2>
+    <p class="mt-1 text-ink/80">Рейтингте осы атпен көрінесің. Ник бірегей болуы керек.</p>
+    <label for="n-username" class="mb-1 mt-4 block font-bold">Ник (username)</label>
+    <input id="n-username" class="field" maxlength="20" autocomplete="off" aria-describedby="n-hint">
+    <p id="n-hint" class="mt-1 min-h-[1.25rem] text-sm text-ink/70">3–20 символ: кіші латын әріптері, сан және _</p>
+    <button id="n-submit" type="submit" class="btn btn-primary mt-4 w-full">Сақтау</button>
+  </form>
+</div>
+
+<!-- AI Agent сканері -->
+<div id="scan-modal" class="fixed inset-0 z-50 hidden place-items-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="scan-title">
+  <div id="scan-box" tabindex="-1" class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl outline-none">
+    <h2 id="scan-title" class="text-xl font-bold">AI Agent Scanning…</h2>
+    <ol id="scan-steps" class="mt-4 space-y-3"></ol>
+    <p id="scan-result" class="mt-5 hidden rounded-lg p-3 font-bold" aria-live="polite"></p>
+    <button id="scan-close" class="btn btn-primary mt-5 hidden w-full">Жабу</button>
+  </div>
+</div>
+
+<div id="toasts" class="pointer-events-none fixed inset-x-0 top-3 z-[60] flex flex-col items-center gap-2 px-4" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module">
+/* =====================================================================
+   EcoHabits: бір файлды SPA
+   Модульдер: Config · Utils · Icons · Toast · Plant · Auth · Profile ·
+              Quests · AntiCheat · Scan · Leaderboard · Router · App
+   ===================================================================== */
+
+/* ---------- Config ---------- */
+const CONFIG = {
+  SUPABASE_URL: 'YOUR_SUPABASE_URL',          // https://xxxx.supabase.co
+  SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY', // public (anon) кілті. Қорғауды RLS жасайды
+  XP_PER_QUEST: 50,                            // supabase_schema.sql ішіндегі мәнмен бірдей болуы керек
+  TZ: 'Asia/Almaty'                            // «күн» осы уақыт белдеуімен есептеледі
+};
+
+/* ---------- Utils ---------- */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const fmt = (n) => Number(n).toLocaleString('ru-RU');
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const dateFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: CONFIG.TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+const dateKey = (d = new Date()) => dateFmt.format(d); // YYYY-MM-DD
+
+function animateNumber(el, from, to, ms = 800) {
+  if (reduceMotion() || from === to) { el.textContent = fmt(to); return; }
+  const t0 = performance.now();
+  const tick = (t) => {
+    const k = Math.min(1, (t - t0) / ms);
+    el.textContent = fmt(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/* ---------- Icons ---------- */
+const ICONS = {
+  leaf:   '<path d="M11 20A7 7 0 0 1 4 13c0-6 6-9 16-10 0 10-3 17-9 17z"/><path d="M4 21c3-6 6-9 11-12"/>',
+  home:   '<path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+  quests: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 14 2 2 4-4"/>',
+  trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  gift:   '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+  bag:    '<path d="M5 8h14l1 13H4z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/>',
+  check:  '<path d="m5 12 5 5 9-10"/>',
+  lock:   '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'
+};
+const icon = (name, cls = 'h-5 w-5') =>
+  `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+const hydrateIcons = (root = document) =>
+  $$('[data-icon]', root).forEach(el => { el.innerHTML = icon(el.dataset.icon, el.dataset.class); el.removeAttribute('data-icon'); });
+
+/* ---------- Toast ---------- */
+const Toast = {
+  show(text, kind = 'info') {
+    const el = document.createElement('div');
+    el.className = 'pointer-events-auto max-w-md rounded-lg px-4 py-3 font-bold shadow-lg ' +
+      (kind === 'error' ? 'bg-red-700 text-white' : kind === 'ok' ? 'bg-moss-800 text-white' : 'bg-ink text-white');
+    el.textContent = text;
+    $('#toasts').appendChild(el);
+    setTimeout(() => el.remove(), 4500);
+  }
+};
+
+/* ---------- Plant (өсу жүйесі) ---------- */
+const STAGES = [
+  { min: 0,    max: 300,      glyph: '🫘',     size: '4rem',   name: 'Дән',             desc: 'Дән топыраққа түсті. Алғашқы тапсырма оны оятады.' },
+  { min: 301,  max: 800,      glyph: '🌱',     size: '5rem',   name: 'Үрпек өскіні',    desc: 'Өскін топырақтан көтерілді. Серияны үзбей жалғастыр.' },
+  { min: 801,  max: 2000,     glyph: '🌿',     size: '6rem',   name: 'Өсімдік',         desc: 'Бұтақтар шыға бастады. Өсімдік енді өз күшімен тұр.' },
+  { min: 2001, max: 4500,     glyph: '🪴',     size: '7rem',   name: 'Жас ағаш',        desc: 'Жас ағаштың діңі қатайды. Табиғатқа нақты үлес қосып жатырсың.' },
+  { min: 4501, max: 8000,     glyph: '🌳',     size: '8.5rem', name: 'Үлкен бәйтерек',  desc: 'Бәйтерек көлеңке бере бастады.' },
+  { min: 8001, max: Infinity, glyph: '🌲🌳🌲', size: '6rem',   name: 'Эко-орман',       desc: 'Бір ағаш орманға айналды. Ең жоғарғы деңгейге жеттің.' }
+];
+
+const Plant = {
+  index(xp) { return STAGES.findIndex(s => xp <= s.max); },
+
+  buildLadders() {
+    $('#plant-ladder').innerHTML = STAGES.map((s, i) =>
+      `<li data-step="${i}" class="flex flex-col items-center gap-1 opacity-40 grayscale" title="${esc(s.name)}: ${fmt(s.min)}+ XP">
+         <span class="text-2xl" aria-hidden="true">${s.glyph.slice(0, 2)}</span>
+         <span class="text-xs text-ink/80">${fmt(s.min)}</span>
+       </li>`).join('');
+    $('#auth-ladder').innerHTML = STAGES.map(s =>
+      `<li class="flex items-center gap-3 text-white/90">
+         <span class="w-9 text-2xl" aria-hidden="true">${s.glyph.slice(0, 2)}</span>
+         <span class="font-bold">${esc(s.name)}</span>
+         <span class="ml-auto text-sm text-white/70">${s.max === Infinity ? fmt(s.min) + '+' : fmt(s.min) + '–' + fmt(s.max)} XP</span>
+       </li>`).join('');
+  },
+
+  render(xp, animate = false) {
+    const i = this.index(xp), s = STAGES[i];
+    const el = $('#plant-emoji');
+    const changed = el.dataset.stage !== String(i);
+    el.textContent = s.glyph;
+    el.style.fontSize = s.size;
+    el.dataset.stage = String(i);
+    el.setAttribute('aria-label', s.name);
+    if (animate && changed && !reduceMotion()) { el.classList.remove('grow'); void el.offsetWidth; el.classList.add('grow'); }
+
+    $('#plant-name').textContent = s.name;
+    $('#plant-desc').textContent = s.desc;
+
+    let pct = 100, note;
+    if (s.max === Infinity) {
+      note = 'Ең жоғарғы деңгейге жеттің. Орман өсе береді.';
+    } else {
+      pct = Math.min(100, ((xp - s.min) / (s.max - s.min + 1)) * 100);
+      note = `Келесі деңгейге дейін ${fmt(s.max + 1 - xp)} XP: ${STAGES[i + 1].name}`;
+    }
+    $('#xp-fill').style.width = pct + '%';
+    $('#xp-bar').setAttribute('aria-valuenow', String(Math.round(pct)));
+    $('#xp-next').textContent = note;
+    $$('#plant-ladder li').forEach(li => {
+      const reached = Number(li.dataset.step) <= i;
+      li.classList.toggle('opacity-40', !reached);
+      li.classList.toggle('grayscale', !reached);
+    });
+  },
+
+  floatXp(amount) {
+    const f = $('#xp-float');
+    f.textContent = `+${amount} XP`;
+    f.classList.remove('run'); void f.offsetWidth; f.classList.add('run');
+  }
+};
+
+/* ---------- Supabase клиенті ---------- */
+const configured =
+  CONFIG.SUPABASE_URL.startsWith('https://') && !CONFIG.SUPABASE_URL.includes('YOUR_') &&
+  !CONFIG.SUPABASE_ANON_KEY.includes('YOUR_');
+let sb = null;
+
+/* ---------- Қолданба күйі ---------- */
+const state = { booted: false, uid: null, profile: null, done: new Set(), busy: false, route: 'home' };
+
+const effectiveStreak = (p) => {
+  const yesterday = dateKey(new Date(Date.now() - 864e5));
+  return p && p.last_active_date && p.last_active_date >= yesterday ? p.streak : 0;
+};
+
+/* ---------- Auth ---------- */
+const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+
+const Auth = {
+  mode: 'login',
+  checkTimer: null,
+
+  setMode(mode) {
+    this.mode = mode;
+    const signup = mode === 'signup';
+    $('#tab-login').setAttribute('aria-selected', String(!signup));
+    $('#tab-signup').setAttribute('aria-selected', String(signup));
+    $('#tab-login').classList.toggle('bg-white', !signup);
+    $('#tab-signup').classList.toggle('bg-white', signup);
+    $('#wrap-username').classList.toggle('hidden', !signup);
+    $('#password-hint').classList.toggle('hidden', !signup);
+    $('#f-password').autocomplete = signup ? 'new-password' : 'current-password';
+    $('#auth-title').textContent = signup ? 'Жаңа аккаунт ашу' : 'Аккаунтқа кіру';
+    $('#auth-submit').textContent = signup ? 'Тіркелу' : 'Кіру';
+    this.msg('');
+  },
+
+  msg(text, kind = 'error') {
+    const el = $('#auth-msg');
+    el.textContent = text;
+    el.className = 'min-h-[1.25rem] text-sm ' + (kind === 'ok' ? 'font-bold text-moss-800' : 'font-bold text-red-700');
+  },
+
+  async usernameAvailable(u) {
+    const { data, error } = await sb.rpc('username_available', { p: u });
+    if (error) throw error;
+    return data === true;
+  },
+
+  /** Ник форматын және бос екенін тексеріп, {ok, text} қайтарады */
+  async validateUsername(raw) {
+    const u = raw.trim().toLowerCase();
+    if (!USERNAME_RE.test(u)) return { ok: false, text: '3–20 символ: кіші латын әріптері, сан және _' };
+    try {
+      return (await this.usernameAvailable(u))
+        ? { ok: true, text: 'Ник бос', u }
+        : { ok: false, text: 'Бұл ник бос емес. Басқасын таңда' };
+    } catch { return { ok: false, text: 'Ник тексерілмеді. Интернетті тексеріп көр' }; }
+  },
+
+  watchUsername(input, hint) {
+    input.addEventListener('input', () => {
+      clearTimeout(this.checkTimer);
+      if (!input.value.trim()) { hint.textContent = '3–20 символ: кіші латын әріптері, сан және _'; hint.className = hint.className.replace(/text-(red-700|moss-800)/g, 'text-ink/70'); return; }
+      this.checkTimer = setTimeout(async () => {
+        const r = await this.validateUsername(input.value);
+        hint.textContent = r.text;
+        hint.className = hint.className.replace(/text-(red-700|moss-800|ink\/70)/g, '') + (r.ok ? ' text-moss-800 font-bold' : ' text-red-700 font-bold');
+      }, 400);
+    });
+  },
+
+  errorText(err) {
+    if (err && err.status === 429) return 'Тым көп әрекет жасалды. Бір минуттан кейін қайталап көр.';
+    const m = (err && err.message || '').toLowerCase();
+    if (m.includes('email not confirmed')) return 'Email расталмаған. Поштаңдағы хаттың сілтемесін бас.';
+    return this.mode === 'login'
+      ? 'Email немесе құпиясөз қате.'
+      : 'Тіркелу мүмкін болмады. Деректерді тексеріп, қайта көр.';
+  },
+
+  async submit() {
+    const email = $('#f-email').value.trim();
+    const password = $('#f-password').value;
+    if (!/^\S+@\S+\.\S+$/.test(email)) return this.msg('Email дұрыс емес.');
+    if (this.mode === 'signup' && password.length < 8) return this.msg('Құпиясөз кемінде 8 символ болуы керек.');
+    if (!password) return this.msg('Құпиясөзді енгіз.');
+
+    const btn = $('#auth-submit');
+    btn.disabled = true; this.msg('');
+    try {
+      if (this.mode === 'signup') {
+        const v = await this.validateUsername($('#f-username').value);
+        if (!v.ok) { this.msg(v.text); return; }
+        const { data, error } = await sb.auth.signUp({
+          email, password,
+          options: { data: { username: v.u }, emailRedirectTo: location.origin + location.pathname }
+        });
+        if (error) throw error;
+        if (!data.session) this.msg('Поштаңа растау хаты жіберілді. Сілтемені басқаннан кейін кіре аласың.', 'ok');
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
+    } catch (err) {
+      this.msg(this.errorText(err));
+    } finally { btn.disabled = false; }
+  },
+
+  async google() {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.origin + location.pathname }
+    });
+    if (error) this.msg('Google арқылы кіру мүмкін болмады. Кейінірек қайталап көр.');
+  },
+
+  async signOut() { await sb.auth.signOut(); }
+};
+
+/* ---------- Profile ---------- */
+const Profile = {
+  COLS: 'id,username,xp,streak,last_active_date',
+
+  async load() {
+    const { data, error } = await sb.from('profiles').select(this.COLS).eq('id', state.uid).maybeSingle();
+    if (error) {
+      console.error('profiles select', error);
+      Toast.show('Профильді жүктеу мүмкін болмады: ' + (error.code || error.message), 'error');
+      return null;
+    }
+    if (data) return data;
+    // профиль жоқ (мысалы, схемаға дейін тіркелген): сервер жағында жасаймыз
+    const r = await sb.rpc('ensure_profile');
+    if (r.error) {
+      console.error('ensure_profile', r.error);
+      Toast.show('Профиль жасалмады: ' + (r.error.code || r.error.message), 'error');
+      return null;
+    }
+    return r.data;
+  },
+
+  apply(p, gained = 0) {
+    const old = state.profile ? state.profile.xp : p.xp;
+    state.profile = p;
+    const streak = effectiveStreak(p);
+
+    $('#chip-name').textContent = '@' + p.username;
+    $('#chip-streak').textContent = `🔥 ${streak}`;
+    $('#chip-xp').textContent = `${fmt(p.xp)} XP`;
+    $('#home-title').textContent = `Сәлем, @${p.username}`;
+
+    animateNumber($('#plant-xp'), old, p.xp);
+    Plant.render(p.xp, gained > 0);
+    if (gained > 0) Plant.floatXp(gained);
+
+    $('#stat-streak').textContent = streak;
+    const today = dateKey();
+    $('#stat-streak-note').textContent =
+      p.last_active_date === today ? 'Бүгінгі серия сақталды.'
+      : streak > 0 ? 'Серияны сақтау үшін бүгін бір тапсырма орында.'
+      : 'Бүгін бір тапсырма орындап, серияны баста.';
+  },
+
+  async loadRank() {
+    const { count, error } = await sb.from('profiles').select('id', { count: 'exact', head: true })
+      .gt('xp', state.profile.xp).not('username', 'is', null);
+    $('#stat-rank').textContent = error ? '–' : String((count || 0) + 1);
+  },
+
+  /* Google-мен кіргендерде ник жоқ: таңдатамыз */
+  askUsername() {
+    const modal = $('#name-modal');
+    modal.classList.remove('hidden'); modal.classList.add('grid');
+    $('#n-username').focus();
+  },
+
+  async saveUsername() {
+    const hint = $('#n-hint'), btn = $('#n-submit');
+    const v = await Auth.validateUsername($('#n-username').value);
+    if (!v.ok) { hint.textContent = v.text; hint.className = 'mt-1 min-h-[1.25rem] text-sm font-bold text-red-700'; return; }
+    btn.disabled = true;
+    const { error } = await sb.from('profiles').update({ username: v.u }).eq('id', state.uid);
+    btn.disabled = false;
+    if (error) {
+      hint.textContent = error.code === '23505' ? 'Бұл ник жаңа ғана алынды. Басқасын таңда.' : 'Сақтау мүмкін болмады. Қайта көр.';
+      hint.className = 'mt-1 min-h-[1.25rem] text-sm font-bold text-red-700';
+      return;
+    }
+    $('#name-modal').classList.add('hidden'); $('#name-modal').classList.remove('grid');
+    await App.enter();
+  }
+};
+
+/* ---------- Quests ---------- */
+const QUESTS = [
+  { key: 'water_tap', title: 'Су кранын жабу',            hint: 'Тіс тазалағанда немесе ыдыс жуғанда кранды жауып ұста. Жабық кран мен ыдыстың суретін түсір.' },
+  { key: 'eco_bag',   title: 'Эко-шоппер қолдану',        hint: 'Дүкенге полиэтилен пакеттің орнына матадан тігілген сөмкемен бар. Сөмке мен сатып алған заттарды түсір.' },
+  { key: 'battery',   title: 'Батарея тапсыру',           hint: 'Қолданылған батареяны жинау жәшігіне сал. Жәшік пен батареяның суреті керек.' },
+  { key: 'sorting',   title: 'Қоқысты сұрыптау',          hint: 'Қағаз, пластик және шыныны бөлек жәшіктерге бөл. Бөлінген қоқыстың суретін жібер.' },
+  { key: 'bottle',    title: 'Қайта толтырылатын бөтелке', hint: 'Бір реттік бөтелкенің орнына өз бөтелкеңмен су ал. Бөтелке көрінетін сурет жібер.' },
+  { key: 'lights',    title: 'Артық шамды сөндіру',       hint: 'Ешкім жоқ бөлмедегі жарықты сөндір. Сөндірілген шамның суретін түсір.' }
+];
+
+const OK_MSG   = '✅ AI Agent Растады: Тапсырма қабылданды! +50 XP';
+const FAKE_MSG = '❌ AI Agent: Қате! Сурет интернеттен алынған немесе бұрын қолданылған!';
+
+class Reject extends Error { constructor(kind, msg) { super(msg || kind); this.kind = kind; } }
+
+const Quests = {
+  async loadDone() {
+    const { data } = await sb.from('quest_logs').select('quest_key').eq('day', dateKey());
+    state.done = new Set((data || []).map(r => r.quest_key));
+  },
+
+  render() {
+    $('#quests-total').textContent = QUESTS.length;
+    $('#stat-total').textContent = QUESTS.length;
+    $('#quests-count').textContent = state.done.size;
+    $('#stat-today').textContent = state.done.size;
+
+    $('#quest-list').innerHTML = QUESTS.map(q => {
+      const done = state.done.has(q.key);
+      return `<li class="card flex flex-col gap-3 p-5 ${done ? 'bg-moss-50' : ''}">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold">${esc(q.title)}</h2>
+            <p class="mt-1 text-ink/80">${esc(q.hint)}</p>
+          </div>
+          <span class="shrink-0 rounded-full bg-sun-100 px-3 py-1 text-sm font-bold">+${CONFIG.XP_PER_QUEST} XP</span>
+        </div>
+        ${done
+          ? `<p class="flex items-center gap-2 font-bold text-moss-800">${icon('check', 'h-5 w-5')} Бүгін орындалды</p>`
+          : `<label class="btn btn-primary cursor-pointer self-start focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-moss-700">
+               ${icon('camera', 'h-5 w-5')} Фото есеп жіберу
+               <input type="file" accept="image/*" class="sr-only" data-quest="${q.key}">
+             </label>`}
+      </li>`;
+    }).join('');
+  },
+
+  async claim(key, fp) {
+    const { data, error } = await sb.rpc('complete_quest', {
+      p_quest_key: key, p_photo_hash: fp.sha, p_phash: fp.dhash
+    });
+    if (error) {
+      const m = error.message || '';
+      if (m.includes('duplicate_photo')) throw new Reject('fake');
+      if (m.includes('already_done')) { state.done.add(key); this.render(); throw new Reject('tech', 'Бұл тапсырма бүгін орындалған.'); }
+      throw new Reject('tech', 'Серверге қосылу кезінде қате шықты. Кейінірек қайталап көр.');
+    }
+    return data;
+  },
+
+  async submit(key, file) {
+    if (state.busy) return;
+    state.busy = true;
+    Scan.open();
+    const ctx = {};
+    try {
+      await Scan.step('Сурет пішімі мен өлшемі тексерілуде…', async () => { ctx.bmp = await AntiCheat.validateFormat(file); });
+      await Scan.step('Метадеректер мен файл атауы талданады…', async () => { AntiCheat.checkMeta(file); });
+      await Scan.step('Суреттің цифрлық таңбасы жасалуда…',    async () => { ctx.fp = await AntiCheat.fingerprint(file, ctx.bmp); });
+      await Scan.step('Дубликаттар базасымен салыстырылуда…',  async () => { ctx.profile = await this.claim(key, ctx.fp); });
+
+      state.done.add(key);
+      Scan.finish(true, OK_MSG);
+      Profile.apply(ctx.profile, CONFIG.XP_PER_QUEST);
+      this.render();
+      Profile.loadRank();
+    } catch (e) {
+      Scan.finish(false, e instanceof Reject && e.kind === 'tech' ? '⚠️ ' + e.message : FAKE_MSG);
+    } finally {
+      if (ctx.bmp && ctx.bmp.close) ctx.bmp.close();
+      state.busy = false;
+    }
+  }
+};
+
+/* ---------- AI Anti-Cheat (имитация + нақты дубликат тексеру) ----------
+   Шынайы бөлігі: SHA-256 (дәл көшірме) және dHash (өлшемі өзгертілген/қайта
+   сақталған көшірме) серверде барлық қолданушылар бойынша салыстырылады.
+   Имитация бөлігі: файл атауы мен түсірілген уақыт бойынша эвристика. Нақты
+   «интернеттен алынған ба» деген модель жоқ, оны кейін сервер жағында қосуға болады. */
+const AntiCheat = {
+  MAX_BYTES: 12 * 1024 * 1024,
+  MIN_SIDE: 300,
+  MAX_AGE_MS: 36 * 3600 * 1000,
+  SUSPICIOUS_NAME: /(google|stock|shutterstock|unsplash|pexels|pixabay|pinterest|freepik|istock|getty|depositphotos|wallpaper|download|скачан)/i,
+
+  async validateFormat(file) {
+    if (!file.type.startsWith('image/')) throw new Reject('tech', 'Тек сурет файлын жүктеуге болады (JPG, PNG, WebP).');
+    if (file.size > this.MAX_BYTES) throw new Reject('tech', 'Сурет тым үлкен. 12 МБ-тан аспауы керек.');
+    let bmp;
+    try { bmp = await createImageBitmap(file); }
+    catch { throw new Reject('tech', 'Сурет оқылмады. JPG немесе PNG пішімін қолданып көр.'); }
+    if (Math.min(bmp.width, bmp.height) < this.MIN_SIDE) { bmp.close(); throw new Reject('fake'); }
+    return bmp;
+  },
+
+  checkMeta(file) {
+    if (this.SUSPICIOUS_NAME.test(file.name)) throw new Reject('fake');
+    if (file.lastModified && Date.now() - file.lastModified > this.MAX_AGE_MS) throw new Reject('fake');
+  },
+
+  async fingerprint(file, bmp) {
+    if (!(window.crypto && crypto.subtle)) throw new Reject('tech', 'Тексеру үшін сайт HTTPS арқылы ашылуы керек.');
+    const buf = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buf);
+    const sha = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+    // dHash: 9×8 сұр масштаб, көрші пикселдерді салыстыру → 64 бит
+    const c = document.createElement('canvas'); c.width = 9; c.height = 8;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, 9, 8);
+    const px = ctx.getImageData(0, 0, 9, 8).data;
+    const gray = (i) => 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+    let dhash = '';
+    for (let y = 0; y < 8; y++)
+      for (let x = 0; x < 8; x++)
+        dhash += gray((y * 9 + x) * 4) > gray((y * 9 + x + 1) * 4) ? '1' : '0';
+    return { sha, dhash };
+  }
+};
+
+/* ---------- Scan (модал) ---------- */
+const Scan = {
+  opener: null,
+
+  open() {
+    this.opener = document.activeElement;
+    $('#scan-steps').innerHTML = '';
+    $('#scan-result').className = 'mt-5 hidden rounded-lg p-3 font-bold';
+    $('#scan-close').classList.add('hidden');
+    const m = $('#scan-modal'); m.classList.remove('hidden'); m.classList.add('grid');
+    $('#scan-box').focus();
+  },
+
+  async step(label, fn, minMs = 650) {
+    const li = document.createElement('li');
+    li.className = 'flex items-center gap-3';
+    li.innerHTML = `<span class="spinner shrink-0" aria-hidden="true"></span><span>${esc(label)}</span>`;
+    $('#scan-steps').appendChild(li);
+    let failure = null;
+    await Promise.all([fn().catch(e => { failure = e; }), sleep(minMs)]);
+    const mark = li.firstElementChild;
+    if (failure) {
+      mark.outerHTML = `<span class="shrink-0 font-bold text-red-700" aria-hidden="true">✕</span>`;
+      throw failure;
+    }
+    mark.outerHTML = `<span class="shrink-0 text-moss-700">${icon('check', 'h-5 w-5')}</span>`;
+  },
+
+  finish(ok, text) {
+    const r = $('#scan-result');
+    r.textContent = text;
+    r.className = 'mt-5 rounded-lg p-3 font-bold ' + (ok ? 'bg-moss-100 text-moss-900' : 'bg-red-50 text-red-800');
+    const b = $('#scan-close'); b.classList.remove('hidden'); b.focus();
+  },
+
+  close() {
+    const m = $('#scan-modal'); m.classList.add('hidden'); m.classList.remove('grid');
+    if (this.opener && this.opener.focus) this.opener.focus();
+  }
+};
+
+/* ---------- Leaderboard ---------- */
+const Leaderboard = {
+  async load() {
+    const body = $('#lb-body'), foot = $('#lb-foot');
+    body.innerHTML = `<tr><td colspan="5" class="px-3 py-6 text-ink/80">Жүктелуде…</td></tr>`;
+    foot.innerHTML = '';
+
+    const { data, error } = await sb.from('profiles')
+      .select('id,username,xp,streak,last_active_date')
+      .not('username', 'is', null)
+      .order('xp', { ascending: false }).order('username')
+      .limit(50);
+
+    if (error) { body.innerHTML = `<tr><td colspan="5" class="px-3 py-6 text-red-700">Рейтингті жүктеу мүмкін болмады.</td></tr>`; return; }
+    if (!data.length) { body.innerHTML = `<tr><td colspan="5" class="px-3 py-6 text-ink/80">Әзірге ешкім ұпай жинаған жоқ.</td></tr>`; return; }
+
+    const row = (p, rank) => {
+      const me = p.id === state.uid;
+      const st = STAGES[Plant.index(p.xp)];
+      return `<tr class="border-t border-moss-100 ${me ? 'bg-sun-100 font-bold' : ''}"${me ? ' aria-current="true"' : ''}>
+        <td class="px-3 py-3">${rank}</td>
+        <td class="max-w-[9rem] truncate px-3 py-3">@${esc(p.username)}${me ? ' <span class="text-sm font-normal">(сен)</span>' : ''}</td>
+        <td class="px-3 py-3 whitespace-nowrap"><span aria-hidden="true">🔥</span> ${effectiveStreak(p)}</td>
+        <td class="px-3 py-3 text-right whitespace-nowrap">${fmt(p.xp)}</td>
+        <td class="px-3 py-3 whitespace-nowrap"><span aria-hidden="true">${st.glyph.slice(0, 2)}</span> <span class="hidden sm:inline">${esc(st.name)}</span></td>
+      </tr>`;
+    };
+
+    body.innerHTML = data.map((p, i) => row(p, i + 1)).join('');
+
+    if (!data.some(p => p.id === state.uid) && state.profile) {
+      const { count } = await sb.from('profiles').select('id', { count: 'exact', head: true })
+        .gt('xp', state.profile.xp).not('username', 'is', null);
+      foot.innerHTML = `<tr><td colspan="5" class="border-t border-moss-200 bg-moss-50 px-3 py-1 text-center text-sm text-ink/70">…</td></tr>` +
+        row(state.profile, (count || 0) + 1);
+    }
+  }
+};
+
+/* ---------- Router ---------- */
+const ROUTES = [
+  { id: 'home',        label: 'Басты бет',   icon: 'home' },
+  { id: 'quests',      label: 'Тапсырмалар', icon: 'quests' },
+  { id: 'leaderboard', label: 'Рейтинг',     icon: 'trophy' },
+  { id: 'store',       label: 'Марапаттар',  icon: 'gift' }
+];
+
+const Router = {
+  build() {
+    $('#nav-desktop').innerHTML = ROUTES.map(r =>
+      `<a href="#/${r.id}" data-route="${r.id}" class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 font-bold hover:bg-moss-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700 aria-[current=page]:bg-moss-100 aria-[current=page]:text-moss-800">${icon(r.icon)}${r.label}</a>`).join('');
+    $('#nav-mobile').innerHTML = ROUTES.map(r =>
+      `<a href="#/${r.id}" data-route="${r.id}" class="flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-bold text-ink/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700 aria-[current=page]:bg-moss-100 aria-[current=page]:text-moss-800">${icon(r.icon)}${r.label}</a>`).join('');
+  },
+
+  current() {
+    const id = (location.hash.match(/^#\/(\w+)/) || [])[1];
+    return ROUTES.some(r => r.id === id) ? id : 'home';
+  },
+
+  go(first = false) {
+    if (!state.profile || !state.profile.username) return;
+    const id = this.current();
+    state.route = id;
+    ROUTES.forEach(r => $('#route-' + r.id).classList.toggle('hidden', r.id !== id));
+    $$('[data-route]').forEach(a => a.getAttribute('href') && (a.dataset.route === id ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+    if (id === 'leaderboard') Leaderboard.load();
+    if (id === 'home') Profile.loadRank();
+    if (!first) { window.scrollTo({ top: 0 }); const h = $('#route-' + id + ' h1'); if (h) h.focus({ preventScroll: true }); }
+  }
+};
+
+/* ---------- App ---------- */
+const App = {
+  show(view) {
+    $('#boot').classList.add('hidden');
+    $('#auth-view').classList.toggle('hidden', view !== 'auth');
+    $('#app-view').classList.toggle('hidden', view !== 'app');
+  },
+
+  async onSession(session) {
+    const uid = session && session.user ? session.user.id : null;
+    if (state.booted && uid === state.uid) return;
+    state.booted = true; state.uid = uid;
+
+    if (!uid) { state.profile = null; this.show('auth'); return; }
+
+    const p = await Profile.load();
+    if (!p) { this.show('auth'); return; }
+    state.profile = p;
+    if (!p.username) { this.show('app'); Profile.askUsername(); return; }
+    await this.enter();
+  },
+
+  async enter() {
+    if (!state.profile.username) state.profile = await Profile.load();
+    await Quests.loadDone();
+    Quests.render();
+    Profile.apply(state.profile);
+    this.show('app');
+    if (!location.hash.startsWith('#/')) location.hash = '#/home';
+    Router.go(true);
+  },
+
+  bind() {
+    $('#tab-login').addEventListener('click', () => Auth.setMode('login'));
+    $('#tab-signup').addEventListener('click', () => Auth.setMode('signup'));
+    $('#auth-form').addEventListener('submit', (e) => { e.preventDefault(); Auth.submit(); });
+    $('#btn-google').addEventListener('click', () => Auth.google());
+    $('#btn-logout').addEventListener('click', () => Auth.signOut());
+    Auth.watchUsername($('#f-username'), $('#username-hint'));
+    Auth.watchUsername($('#n-username'), $('#n-hint'));
+    $('#name-form').addEventListener('submit', (e) => { e.preventDefault(); Profile.saveUsername(); });
+
+    $('#quest-list').addEventListener('change', (e) => {
+      const input = e.target.closest('input[type=file][data-quest]');
+      if (!input || !input.files[0]) return;
+      const file = input.files[0];
+      input.value = '';
+      Quests.submit(input.dataset.quest, file);
+    });
+
+    $('#scan-close').addEventListener('click', () => Scan.close());
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !$('#scan-close').classList.contains('hidden') && !$('#scan-modal').classList.contains('hidden')) Scan.close();
+    });
+    window.addEventListener('hashchange', () => Router.go());
+  },
+
+  async init() {
+    hydrateIcons();
+    Plant.buildLadders();
+    Router.build();
+    this.bind();
+    Auth.setMode('login');
+
+    if (!configured) {
+      $('#boot').classList.add('hidden');
+      const w = $('#config-warning'); w.classList.remove('hidden'); w.classList.add('grid');
+      return;
+    }
+
+    sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' }
+    });
+
+    // колбэк ішінде Supabase шақыруларын тікелей жасамаймыз (setTimeout арқылы)
+    sb.auth.onAuthStateChange((_event, session) => { setTimeout(() => this.onSession(session), 0); });
+    const { data } = await sb.auth.getSession();
+    await this.onSession(data.session);
+
+    // OAuth қайтарған ?code=… параметрін мекенжайдан тазалау
+    if (location.search.includes('code=')) history.replaceState({}, '', location.pathname + location.hash);
+  }
+};
+
+App.init();
+</script>
+</body>
+</html>
