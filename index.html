@@ -1,0 +1,2242 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EcoHabits</title>
+<meta name="description" content="Күнде бір эко-тапсырма орында, XP жина, өз орманыңды өсір.">
+<script>
+  document.documentElement.classList.add('js');
+
+  (function () {
+    function show(msg) {
+      var b = document.getElementById('boot');
+      if (!b || b.getAttribute('data-err')) return;
+      b.setAttribute('data-err', '1');
+      b.textContent = 'Қате / Ошибка: ' + msg;
+      b.style.cssText = 'display:grid;place-items:center;min-height:100vh;padding:24px;text-align:center;font:16px sans-serif;color:#b91c1c';
+    }
+    window.addEventListener('error', function (e) { show(e.message || 'error'); });
+    window.addEventListener('unhandledrejection', function (e) { show(String(e.reason && e.reason.message || e.reason)); });
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          moss: { 50:'#f1f6f1', 100:'#dfeadf', 200:'#bfd5c0', 600:'#2e7a4a', 700:'#256240', 800:'#1c4d33', 900:'#133524' },
+          sun:  { 100:'#fdf0c4', 400:'#f4c430', 500:'#e5ad0a' },
+          ink:  '#17231c'
+        },
+        fontFamily: { sans: ['"PT Sans"', 'system-ui', 'sans-serif'] }
+      }
+    }
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer components {
+    .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 py-2 font-bold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss-700 disabled:cursor-not-allowed disabled:opacity-60; }
+    .btn-primary { @apply bg-moss-700 text-white hover:bg-moss-800; }
+    .btn-ghost { @apply border border-moss-200 bg-white text-ink hover:bg-moss-50; }
+    .field { @apply block w-full min-h-[44px] rounded-lg border border-moss-200 bg-white px-3 py-2 text-ink placeholder:text-ink/50 focus:border-moss-700 focus:outline focus:outline-2 focus:outline-moss-700; }
+    .card { @apply rounded-xl border border-moss-200 bg-white; }
+  }
+</style>
+<style>
+  html { scroll-behavior: smooth; }
+  #auth-view.hidden { display: none !important; }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+
+  .lang { display: inline-flex; border-radius: .6rem; border: 1px solid #bfd5c0; background: #fff; padding: 2px; }
+  .lang-btn { min-height: 40px; min-width: 48px; border-radius: .45rem; font-weight: 700; font-size: .875rem; color: #17231c; transition: background-color .15s, color .15s; }
+  .lang-btn:hover { background: #f1f6f1; }
+  .lang-btn[aria-pressed="true"] { background: #256240; color: #fff; }
+  .lang-btn:focus-visible { outline: 2px solid #256240; outline-offset: 2px; }
+
+  .qtab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 52px; padding: .3rem .25rem; line-height: 1.2; border-radius: .5rem; font-weight: 700; color: #17231c; transition: background-color .2s, box-shadow .2s; }
+  .qtab:hover { background: rgba(255,255,255,.55); }
+  .qtab[aria-selected="true"] { background: #fff; box-shadow: 0 1px 3px rgba(19,53,36,.18); }
+  .qtab:focus-visible { outline: 2px solid #256240; outline-offset: 2px; }
+
+  .plant { line-height: 1; transform-origin: 50% 100%; animation: sway 6s ease-in-out infinite; transition: height .6s cubic-bezier(.2,.8,.2,1), width .6s cubic-bezier(.2,.8,.2,1); }
+  .plant.grow { animation: grow .9s cubic-bezier(.2,.8,.2,1), sway 6s ease-in-out .9s infinite; }
+  @keyframes sway { 0%,100% { transform: rotate(-.8deg); } 50% { transform: rotate(.8deg); } }
+  @keyframes grow { from { transform: scale(.2); opacity: .2; } 60% { transform: scale(1.1); } to { transform: scale(1); opacity: 1; } }
+  @keyframes xpfloat { from { opacity: 0; transform: translateY(0); } 15% { opacity: 1; } to { opacity: 0; transform: translateY(-80px); } }
+  .xp-float.run { animation: xpfloat 1.6s ease-out forwards; }
+  .bar-fill { position: relative; overflow: hidden; transition: width .9s cubic-bezier(.2,.8,.2,1); }
+  .bar-fill.shine::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.6) 50%, transparent 70%); transform: translateX(-100%); animation: shine 1.2s ease-out .7s; }
+  @keyframes shine { to { transform: translateX(100%); } }
+
+  .sky-dawn  { background: linear-gradient(#f9d9b6, #fbeede 70%); }
+  .sky-day   { background: linear-gradient(#a9dcf3, #e9f6ee 72%); }
+  .sky-eve   { background: linear-gradient(#f2a36b, #f8dcc0 70%); }
+  .sky-night { background: linear-gradient(#0d1b2e, #2a4560 75%); }
+  .cloud { position: absolute; height: 22px; border-radius: 999px; animation: drift 46s linear infinite alternate; }
+  .cloud::before { content: ""; position: absolute; left: 18%; top: -12px; width: 40%; height: 26px; border-radius: 999px; background: inherit; }
+  @keyframes drift { from { transform: translateX(-30px); } to { transform: translateX(60px); } }
+  .sw { transform-box: fill-box; transform-origin: 50% 100%; animation: leafsway 5.5s ease-in-out infinite; }
+  @keyframes leafsway { 0%,100% { transform: rotate(-2.2deg); } 50% { transform: rotate(2.2deg); } }
+  .swing { transform-box: fill-box; transform-origin: 50% 0%; animation: swing 4.2s ease-in-out infinite; }
+  @keyframes swing { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  .tw { transform-box: fill-box; transform-origin: center; animation: twinkle 2.4s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100% { opacity: .25; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.1); } }
+  .rays { transform-box: fill-box; transform-origin: center; animation: spin 60s linear infinite; }
+  .bird { position: absolute; left: 0; animation: fly 26s linear infinite; }
+  @keyframes fly { from { transform: translateX(-60px) translateY(0); } 50% { transform: translateX(40vw) translateY(-14px); } to { transform: translateX(100vw) translateY(6px); } }
+  .wing { transform-box: fill-box; transform-origin: 50% 100%; animation: flap .45s ease-in-out infinite alternate; }
+  @keyframes flap { from { transform: scaleY(1); } to { transform: scaleY(.35); } }
+  .bfly { position: absolute; animation: flutter 16s ease-in-out infinite; }
+  @keyframes flutter { 0%,100% { transform: translate(0,0); } 20% { transform: translate(70px,-30px); } 40% { transform: translate(130px,10px); } 60% { transform: translate(50px,-44px); } 80% { transform: translate(-20px,-12px); } }
+  .bw { transform-box: view-box; transform-origin: 12px 10px; animation: flapw .28s ease-in-out infinite alternate; }
+  @keyframes flapw { from { transform: scaleX(1); } to { transform: scaleX(.25); } }
+  .ff { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #f7f08a; box-shadow: 0 0 8px 3px rgba(247,240,138,.6); animation: twinkle 3s ease-in-out infinite; }
+
+  .js [data-reveal] { opacity: 0; transform: translateY(18px); transition: opacity .6s ease-out var(--d, 0ms), transform .7s cubic-bezier(.2,.8,.2,1) var(--d, 0ms); }
+  .js [data-reveal].in { opacity: 1; transform: none; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .rise { animation: rise .7s cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--d, 0ms); }
+  .lb-row { animation: rise .45s ease-out both; animation-delay: calc(var(--i, 0) * 35ms); }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .draw-circle { stroke-dasharray: 76; stroke-dashoffset: 76; animation: draw .5s ease-out .05s forwards; }
+  .draw-check { stroke-dasharray: 20; stroke-dashoffset: 20; animation: draw .35s ease-out .45s forwards; }
+  @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(37,98,64,.45); } 100% { box-shadow: 0 0 0 10px rgba(37,98,64,0); } }
+  .now { animation: pulse-ring 2s ease-out infinite; border-radius: .75rem; }
+
+  .spinner { width: 18px; height: 18px; border: 3px solid #bfd5c0; border-top-color: #256240; border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #app-header { transition: box-shadow .2s; }
+  #app-header.scrolled { box-shadow: 0 2px 10px rgba(19,53,36,.1); }
+  ::selection { background: #f4c430; color: #17231c; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plant, .plant.grow, .xp-float.run, .spinner, .cloud, .rise, .lb-row, .sw, .swing, .tw, .rays, .bird, .wing, .bfly, .bw, .ff, .now,
+    .bar-fill.shine::after { animation: none; }
+    .draw-circle, .draw-check { animation: none; stroke-dashoffset: 0; }
+    .js [data-reveal] { opacity: 1; transform: none; transition: none; }
+    * { transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  }
+</style>
+</head>
+
+<body class="bg-moss-50 font-sans text-ink antialiased">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="gLeaf" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#2f8d4e"/><stop offset="1" stop-color="#86d68f"/></linearGradient>
+    <linearGradient id="gLeafD" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1f6a3c"/><stop offset="1" stop-color="#4fae6a"/></linearGradient>
+    <linearGradient id="gTrunk" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5b3f27"/><stop offset=".55" stop-color="#8a6140"/><stop offset="1" stop-color="#5e4029"/></linearGradient>
+    <radialGradient id="gCan" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#9be59a"/><stop offset=".55" stop-color="#3fa05c"/><stop offset="1" stop-color="#26763f"/></radialGradient>
+    <radialGradient id="gCanD" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#4fae6a"/><stop offset="1" stop-color="#1b5c35"/></radialGradient>
+    <radialGradient id="gSeed" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#e3b077"/><stop offset="1" stop-color="#8a5a2e"/></radialGradient>
+    <linearGradient id="gSoil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a6a47"/><stop offset="1" stop-color="#4d3826"/></linearGradient>
+    <linearGradient id="gPine" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4aa56a"/><stop offset="1" stop-color="#1d5a3a"/></linearGradient>
+    <radialGradient id="gSun" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff6c2"/><stop offset=".7" stop-color="#f7cf45"/><stop offset="1" stop-color="#f4b82b"/></radialGradient>
+    <linearGradient id="gFlame" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e8590c"/><stop offset=".6" stop-color="#f59f00"/><stop offset="1" stop-color="#ffd43b"/></linearGradient>
+    <radialGradient id="gApple" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ff8a80"/><stop offset="1" stop-color="#c62828"/></radialGradient>
+  </defs>
+</svg>
+
+<a href="#main" class="sr-only rounded bg-white px-3 py-2 focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50" data-i18n="skip">Мазмұнға өту</a>
+
+<div id="config-warning" class="hidden min-h-screen place-items-center p-6">
+  <div class="card max-w-lg p-6">
+    <h1 class="text-xl font-bold" data-i18n="cfg.title">Supabase әлі қосылмаған</h1>
+    <p class="mt-2 text-ink/80" data-i18n-html="cfg.body"></p>
+  </div>
+</div>
+
+<div id="boot" class="grid min-h-screen place-items-center">
+  <div class="flex items-center gap-3 text-ink/80"><span class="spinner" aria-hidden="true"></span> <span data-i18n="boot">Жүктелуде…</span></div>
+</div>
+
+<section id="auth-view" class="hidden min-h-screen lg:grid lg:grid-cols-2" data-i18n-aria="auth.aria" aria-label="Кіру және тіркелу">
+  <div class="overflow-hidden bg-moss-900 p-8 text-white lg:p-14">
+    <div class="rise flex items-center gap-2 text-xl font-bold"><span data-icon="leaf" data-class="h-7 w-7 text-sun-400"></span> EcoHabits</div>
+    <h1 class="rise mt-8 max-w-md text-3xl font-bold leading-tight lg:text-4xl" style="--d:120ms; text-wrap: balance" data-i18n="auth.h1"></h1>
+    <p class="rise mt-4 max-w-md text-white/80" style="--d:220ms" data-i18n="auth.p"></p>
+
+    <div class="rise mt-8 max-w-md" style="--d:320ms">
+      <div class="relative h-56 overflow-hidden rounded-2xl sky-day">
+        <div class="absolute right-6 top-5 h-12 w-12 rounded-full" style="background:radial-gradient(circle,#fff6c2,#f7cf45 70%)" aria-hidden="true"></div>
+        <div class="cloud" style="left:8%; top:22px; width:80px; background:rgba(255,255,255,.85)" aria-hidden="true"></div>
+        <div class="absolute inset-x-0 bottom-0 h-8" style="background:linear-gradient(#8a6a47,#4d3826)" aria-hidden="true"></div>
+        <div class="absolute inset-x-0 bottom-5 flex justify-center"><div id="hero-plant" class="plant h-48 w-48" role="img" aria-hidden="true"></div></div>
+      </div>
+      <p id="hero-cap" class="mt-3 text-sm text-white/80" aria-live="off"></p>
+    </div>
+
+    <ol id="auth-ladder" class="mt-8 hidden max-w-md gap-2 lg:grid"></ol>
+  </div>
+
+  <div class="relative flex items-center justify-center p-6 lg:p-14">
+    <div class="absolute right-4 top-4"><div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Тіл">
+      <button type="button" class="lang-btn" data-lang="kk" aria-pressed="true">ҚАЗ</button>
+      <button type="button" class="lang-btn" data-lang="ru" aria-pressed="false">РУС</button>
+    </div></div>
+
+    <div class="rise w-full max-w-sm pt-10 lg:pt-0" style="--d:200ms">
+      <div role="tablist" data-i18n-aria="auth.tabs.aria" aria-label="Кіру немесе тіркелу" class="grid grid-cols-2 rounded-lg bg-moss-100 p-1">
+        <button id="tab-login" role="tab" aria-selected="true" class="min-h-[44px] rounded-md font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700" data-i18n="auth.login">Кіру</button>
+        <button id="tab-signup" role="tab" aria-selected="false" class="min-h-[44px] rounded-md font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700" data-i18n="auth.signup">Тіркелу</button>
+      </div>
+
+      <h2 id="auth-title" class="mt-6 text-2xl font-bold"></h2>
+
+      <button id="btn-google" type="button" class="btn btn-ghost mt-5 w-full">
+        <svg viewBox="0 0 48 48" class="h-5 w-5" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        <span data-i18n="auth.google"></span>
+      </button>
+
+      <div class="my-5 flex items-center gap-3 text-sm text-ink/70" aria-hidden="true"><span class="h-px flex-1 bg-moss-200"></span><span data-i18n="auth.or">немесе</span><span class="h-px flex-1 bg-moss-200"></span></div>
+
+      <form id="auth-form" novalidate class="space-y-4">
+        <div>
+          <label for="f-email" class="mb-1 block font-bold" data-i18n="f.email">Email</label>
+          <input id="f-email" class="field" type="email" autocomplete="email" required placeholder="aidar@mail.kz">
+        </div>
+        <div id="wrap-username" class="hidden">
+          <label for="f-username" class="mb-1 block font-bold" data-i18n="f.username"></label>
+          <input id="f-username" class="field" type="text" autocomplete="username" maxlength="20" placeholder="eco_aidar" aria-describedby="username-hint">
+          <p id="username-hint" class="mt-1 text-sm text-ink/70" data-i18n="f.username.hint"></p>
+        </div>
+        <div>
+          <label for="f-password" class="mb-1 block font-bold" data-i18n="f.password"></label>
+          <input id="f-password" class="field" type="password" autocomplete="current-password" required minlength="8" aria-describedby="password-hint">
+          <p id="password-hint" class="mt-1 hidden text-sm text-ink/70" data-i18n="f.password.hint"></p>
+        </div>
+        <p id="auth-msg" class="min-h-[1.25rem] text-sm" role="alert"></p>
+        <button id="auth-submit" type="submit" class="btn btn-primary w-full"></button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<div id="app-view" class="hidden">
+  <header id="app-header" class="sticky top-0 z-30 border-b border-moss-200 bg-white">
+    <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2">
+      <div class="flex items-center gap-2 text-lg font-bold"><span data-icon="leaf" data-class="h-6 w-6 text-moss-700"></span> EcoHabits</div>
+      <nav id="nav-desktop" class="ml-4 hidden gap-1 md:flex" data-i18n-aria="nav.main.aria" aria-label="Негізгі мәзір"></nav>
+      <div class="ml-auto flex items-center gap-3">
+        <div class="hidden text-right leading-tight lg:block">
+          <div id="chip-name" class="max-w-[10rem] truncate font-bold"></div>
+          <div class="flex items-center justify-end gap-1 text-sm text-ink/70"><span id="chip-streak" class="inline-flex items-center gap-1"></span><span aria-hidden="true">·</span><span id="chip-xp"></span></div>
+        </div>
+        <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Тіл">
+          <button type="button" class="lang-btn" data-lang="kk" aria-pressed="true">ҚАЗ</button>
+          <button type="button" class="lang-btn" data-lang="ru" aria-pressed="false">РУС</button>
+        </div>
+        <button id="btn-logout" class="btn btn-ghost" data-i18n-aria="logout" aria-label="Шығу"><span data-icon="logout" data-class="h-5 w-5"></span><span class="hidden sm:inline" data-i18n="logout"></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" class="mx-auto max-w-6xl px-4 pb-28 pt-6 md:pb-10">
+
+    <section id="route-home" class="hidden space-y-6">
+      <h1 id="home-title" tabindex="-1" data-reveal class="text-2xl font-bold outline-none"></h1>
+      <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <div class="card overflow-hidden" data-reveal>
+          <div id="plant-scene" class="relative h-80 overflow-hidden sm:h-96">
+            <div id="scene-sky" class="absolute inset-0"></div>
+            <div id="scene-objs" aria-hidden="true"></div>
+            <div id="scene-land" aria-hidden="true"></div>
+            <div id="scene-fx" aria-hidden="true"></div>
+            <div class="absolute inset-x-0 flex justify-center" style="bottom:36px">
+              <div id="plant-art" class="plant" role="img"></div>
+            </div>
+            <div id="scene-front" aria-hidden="true"></div>
+            <div id="scene-tint" class="pointer-events-none absolute inset-0" aria-hidden="true"></div>
+            <div id="xp-float" class="xp-float pointer-events-none absolute inset-x-0 bottom-44 text-center text-2xl font-bold text-moss-900 opacity-0" aria-hidden="true">+50 XP</div>
+          </div>
+          <div class="space-y-4 p-5">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="plant-name" class="text-xl font-bold"></h2>
+              <p class="font-bold text-moss-700"><span id="plant-xp">0</span> XP</p>
+            </div>
+            <p id="plant-desc" class="text-ink/80"></p>
+            <div>
+              <div id="xp-bar" class="h-3 overflow-hidden rounded-full bg-moss-100" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-aria="xp.aria">
+                <div id="xp-fill" class="bar-fill h-full rounded-full" style="width:0%; background:linear-gradient(90deg,#2e7a4a,#6bbf6f)"></div>
+              </div>
+              <p id="xp-next" class="mt-2 text-sm text-ink/80"></p>
+            </div>
+            <ol id="plant-ladder" class="grid grid-cols-6 gap-1 pt-1 text-center" data-i18n-aria="home.ladder.aria" aria-label="Өсу деңгейлері"></ol>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="card p-5" data-reveal>
+            <p class="text-sm font-bold text-ink/70" data-i18n="home.streak"></p>
+            <p class="mt-1 flex items-center gap-2 text-4xl font-bold"><span data-flame="h-9 w-9"></span><span id="stat-streak">0</span> <span id="stat-streak-unit" class="text-xl"></span></p>
+            <p id="stat-streak-note" class="mt-1 text-sm text-ink/80"></p>
+          </div>
+          <div class="card p-5" data-reveal>
+            <p class="text-sm font-bold text-ink/70" data-i18n="home.today"></p>
+            <p class="mt-1 text-2xl font-bold"><span id="stat-today">0</span> / <span id="stat-total">0</span></p>
+            <a href="#/quests" class="btn btn-primary mt-3 w-full" data-i18n="home.toQuests"></a>
+          </div>
+          <div class="card p-5" data-reveal>
+            <p class="text-sm font-bold text-ink/70" data-i18n="home.rank"></p>
+            <p class="mt-1 text-2xl font-bold">#<span id="stat-rank">–</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <a href="#/quests" data-go-tab="week" class="card block p-5 transition-colors hover:border-moss-600" data-reveal>
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-lg font-bold" data-i18n="home.week"></h2>
+            <p class="font-bold text-moss-700"><span id="wk-text"></span></p>
+          </div>
+          <div class="mt-3 h-2.5 overflow-hidden rounded-full bg-moss-100"><div id="wk-bar" data-bar class="bar-fill h-full rounded-full" style="width:0%; background:linear-gradient(90deg,#2e7a4a,#6bbf6f)"></div></div>
+          <p id="wk-left" class="mt-2 text-sm text-ink/80"></p>
+        </a>
+        <a href="#/quests" data-go-tab="month" class="card block p-5 transition-colors hover:border-moss-600" data-reveal>
+          <div class="flex items-baseline justify-between gap-3">
+            <h2 class="text-lg font-bold" data-i18n="home.month"></h2>
+            <p class="font-bold text-moss-700"><span id="mo-text"></span></p>
+          </div>
+          <div class="mt-3 h-2.5 overflow-hidden rounded-full bg-moss-100"><div id="mo-bar" data-bar class="bar-fill h-full rounded-full" style="width:0%; background:linear-gradient(90deg,#c98b0a,#f4c430)"></div></div>
+          <p id="mo-left" class="mt-2 text-sm text-ink/80"></p>
+        </a>
+      </div>
+    </section>
+
+    <section id="route-quests" class="hidden space-y-5">
+      <h1 tabindex="-1" class="text-2xl font-bold outline-none" data-reveal data-i18n="quests.title"></h1>
+
+      <div data-reveal>
+        <div id="quest-tabs" role="tablist" data-i18n-aria="quests.tabs.aria" aria-label="Тапсырма түрі" class="flex max-w-lg rounded-lg bg-moss-100 p-1">
+          <button type="button" role="tab" id="qtab-day" data-tab="day" aria-controls="quest-list" aria-selected="true"><span data-i18n="quests.tab.day"></span><span id="qcount-day" class="text-sm font-normal text-ink/70"></span></button>
+          <button type="button" role="tab" id="qtab-week" data-tab="week" aria-controls="quest-list" aria-selected="false"><span data-i18n="quests.tab.week"></span><span id="qcount-week" class="text-sm font-normal text-ink/70"></span></button>
+          <button type="button" role="tab" id="qtab-month" data-tab="month" aria-controls="quest-list" aria-selected="false"><span data-i18n="quests.tab.month"></span><span id="qcount-month" class="text-sm font-normal text-ink/70"></span></button>
+        </div>
+        <p id="quest-intro" class="mt-3 max-w-2xl text-ink/80"></p>
+        <p id="quest-reset" class="mt-1 text-sm font-bold text-moss-700"></p>
+      </div>
+
+      <ul id="quest-list" role="tabpanel" aria-labelledby="qtab-day" class="grid gap-4 md:grid-cols-2"></ul>
+
+      <div data-reveal class="card max-w-2xl p-4 text-sm text-ink/80">
+        <p><span class="font-bold text-ink" data-i18n="quests.photo.title"></span> <span data-i18n="quests.photo.body"></span></p>
+        <p class="mt-2" data-i18n="quests.model"></p>
+      </div>
+    </section>
+
+    <section id="route-leaderboard" class="hidden space-y-5">
+      <div data-reveal>
+        <h1 tabindex="-1" class="text-2xl font-bold outline-none" data-i18n="lb.title"></h1>
+        <p class="mt-1 text-ink/80" data-i18n="lb.sub"></p>
+      </div>
+      <ol id="lb-podium" class="grid items-end gap-3 sm:grid-cols-3"></ol>
+      <div class="card overflow-hidden" data-reveal>
+        <table class="w-full text-left">
+          <caption class="sr-only" data-i18n="lb.caption"></caption>
+          <thead class="bg-moss-100 text-sm">
+            <tr>
+              <th scope="col" class="w-14 px-3 py-3">#</th>
+              <th scope="col" class="px-3 py-3" data-i18n="lb.user"></th>
+              <th scope="col" class="px-3 py-3" data-i18n="lb.streak"></th>
+              <th scope="col" class="px-3 py-3 text-right">XP</th>
+              <th scope="col" class="px-3 py-3" data-i18n="lb.status"></th>
+            </tr>
+          </thead>
+          <tbody id="lb-body"></tbody>
+          <tfoot id="lb-foot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section id="route-store" class="hidden space-y-5">
+      <div data-reveal>
+        <h1 tabindex="-1" class="text-2xl font-bold outline-none" data-i18n="store.title"></h1>
+        <p class="mt-3 text-2xl font-bold" data-i18n="store.soon"></p>
+        <p class="text-xs text-ink/70" data-i18n="store.small"></p>
+      </div>
+      <ul class="grid gap-4 md:grid-cols-3">
+        <li data-reveal class="card flex flex-col gap-3 p-5">
+          <span data-icon="gift" data-class="h-8 w-8 text-moss-700"></span>
+          <h2 class="text-lg font-bold" data-i18n="store.promo.t"></h2>
+          <p class="text-ink/80" data-i18n="store.promo.d"></p>
+          <button class="btn btn-ghost mt-auto" disabled aria-disabled="true"><span data-icon="lock" data-class="h-4 w-4"></span> <span data-i18n="store.soon"></span></button>
+        </li>
+        <li data-reveal class="card flex flex-col gap-3 p-5">
+          <span data-icon="bag" data-class="h-8 w-8 text-moss-700"></span>
+          <h2 class="text-lg font-bold" data-i18n="store.bag.t"></h2>
+          <p class="text-ink/80" data-i18n="store.bag.d"></p>
+          <button class="btn btn-ghost mt-auto" disabled aria-disabled="true"><span data-icon="lock" data-class="h-4 w-4"></span> <span data-i18n="store.soon"></span></button>
+        </li>
+        <li data-reveal class="card flex flex-col gap-3 p-5">
+          <span data-icon="leaf" data-class="h-8 w-8 text-moss-700"></span>
+          <h2 class="text-lg font-bold" data-i18n="store.tree.t"></h2>
+          <p class="text-ink/80" data-i18n="store.tree.d"></p>
+          <button class="btn btn-ghost mt-auto" disabled aria-disabled="true"><span data-icon="lock" data-class="h-4 w-4"></span> <span data-i18n="store.soon"></span></button>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <nav id="nav-mobile" class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-moss-200 bg-white md:hidden" data-i18n-aria="nav.bottom.aria" aria-label="Төменгі мәзір"></nav>
+</div>
+
+<div id="name-modal" class="fixed inset-0 z-50 hidden place-items-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="name-title">
+  <form id="name-form" class="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" novalidate>
+    <h2 id="name-title" class="text-xl font-bold" data-i18n="name.title"></h2>
+    <p class="mt-1 text-ink/80" data-i18n="name.p"></p>
+    <label for="n-username" class="mb-1 mt-4 block font-bold" data-i18n="f.username"></label>
+    <input id="n-username" class="field" maxlength="20" autocomplete="off" aria-describedby="n-hint">
+    <p id="n-hint" class="mt-1 min-h-[1.25rem] text-sm text-ink/70" data-i18n="f.username.hint"></p>
+    <button id="n-submit" type="submit" class="btn btn-primary mt-4 w-full" data-i18n="save"></button>
+  </form>
+</div>
+
+<div id="scan-modal" class="fixed inset-0 z-50 hidden place-items-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="scan-title">
+  <div id="scan-box" tabindex="-1" class="relative w-full max-w-md rounded-xl bg-white p-6 shadow-xl outline-none">
+    <h2 id="scan-title" class="text-xl font-bold" data-i18n="scan.title"></h2>
+    <ol id="scan-steps" class="mt-4 space-y-3"></ol>
+    <div id="scan-result" class="mt-5 hidden items-start gap-3 rounded-lg p-3 font-bold" aria-live="polite"></div>
+    <div class="mt-5 flex flex-col gap-2 sm:flex-row">
+      <button id="scan-go" class="btn btn-primary hidden flex-1" data-i18n="scan.go"></button>
+      <button id="scan-close" class="btn btn-ghost hidden flex-1" data-i18n="close"></button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts" class="pointer-events-none fixed inset-x-0 top-3 z-[60] flex flex-col items-center gap-2 px-4" role="status" aria-live="polite"></div>
+
+<script nomodule>
+  var b = document.getElementById('boot');
+  if (b) { b.textContent = 'Браузерің ескірген / Браузер устарел. Chrome / Safari'; b.style.cssText = 'display:grid;place-items:center;min-height:100vh;padding:24px;text-align:center;font:16px sans-serif'; }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module">
+
+const CONFIG = {
+  TZ: 'Asia/Almaty',
+  SUPABASE_URL: '',
+  SUPABASE_ANON_KEY: ''
+};
+
+async function loadConfig() {
+  try {
+    const m = await import('./config.js');
+    Object.assign(CONFIG, m.CONFIG);
+  } catch (e) { console.warn('config.js табылмады', e); }
+
+  CONFIG.SUPABASE_URL = String(CONFIG.SUPABASE_URL || '').trim().replace(/\/(rest|auth)\/v1\/?$/, '').replace(/\/+$/, '');
+  CONFIG.SUPABASE_ANON_KEY = String(CONFIG.SUPABASE_ANON_KEY || '').trim();
+}
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const fmt = (n) => Number(n).toLocaleString('ru-RU');
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const dateFmt = new Intl.DateTimeFormat('sv-SE', { timeZone: CONFIG.TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+const dateKey = (d = new Date()) => dateFmt.format(d);
+
+const hourFmt = new Intl.DateTimeFormat('en-GB', { timeZone: CONFIG.TZ, hour: '2-digit', hour12: false });
+
+function animateNumber(el, from, to, ms = 900) {
+  const id = el._an = (el._an || 0) + 1;
+  if (reduceMotion() || from === to) { el.textContent = fmt(to); return; }
+  const t0 = performance.now();
+  const tick = (t) => {
+    if (el._an !== id) return;
+    const k = Math.min(1, (t - t0) / ms);
+    el.textContent = fmt(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+const DICT = {
+  kk: {
+    'skip': 'Мазмұнға өту',
+    'boot': 'Жүктелуде…',
+    'close': 'Жабу',
+    'save': 'Сақтау',
+    'lang.label': 'Тіл',
+    'meta.desc': 'Күнде бір эко-тапсырма орында, XP жина, өз орманыңды өсір.',
+    'cfg.title': 'Supabase әлі қосылмаған',
+    'cfg.body': '<code class="rounded bg-moss-100 px-1">config.js</code> файлы <code class="rounded bg-moss-100 px-1">index.html</code> жанында тұрғанын және ішінде <code class="rounded bg-moss-100 px-1">SUPABASE_URL</code> мен <code class="rounded bg-moss-100 px-1">SUPABASE_ANON_KEY</code> толтырылғанын тексер.',
+
+    'auth.aria': 'Кіру және тіркелу',
+    'auth.h1': 'Күнде бір кішкентай іс. Дәнің біртіндеп орман болады.',
+    'auth.p': 'Кранды жап, батареяны дұрыс жерге тапсыр, суретін жібер. Әр істен XP жиналады, ал өсімдігің келесі деңгейге өтеді.',
+    'auth.tabs.aria': 'Кіру немесе тіркелу',
+    'auth.login': 'Кіру',
+    'auth.signup': 'Тіркелу',
+    'auth.title.login': 'Қайта келдің бе?',
+    'auth.title.signup': 'Бастап көрейік',
+    'auth.google': 'Google арқылы кіру',
+    'auth.or': 'немесе',
+    'auth.submit.login': 'Кіру',
+    'auth.submit.signup': 'Тіркелу',
+    'auth.confirmSent': 'Поштаңа растау хаты кетті. Сілтемені бассаң, кіре аласың.',
+    'auth.googleFail': 'Google арқылы кіру болмады. Кейінірек қайта көр.',
+    'f.email': 'Email',
+    'f.username': 'Ник (username)',
+    'f.username.hint': '3–20 символ: кіші латын әріптері, сан және _',
+    'f.password': 'Құпиясөз',
+    'f.password.hint': 'Кемінде 8 символ',
+    'err.email': 'Email дұрыс емес.',
+    'err.pass8': 'Құпиясөз кемінде 8 символ болсын.',
+    'err.passEmpty': 'Құпиясөзді жаз.',
+    'err.rate': 'Тым көп әрекет болды. Бір минут күте тұрып, қайта көр.',
+    'err.unconfirmed': 'Email расталмаған. Поштаңдағы хаттың сілтемесін бас.',
+    'err.login': 'Email немесе құпиясөз қате.',
+    'err.signup': 'Тіркелу болмады. Деректерді тексеріп, қайта көр.',
+    'username.free': 'Ник бос',
+    'username.taken': 'Бұл ник бос емес. Басқасын таңда',
+    'username.checkFail': 'Ник тексерілмеді. Интернетті тексеріп көр',
+    'name.title': 'Өзіңе ник ойлап тап',
+    'name.p': 'Рейтингте осы атпен көрінесің. Бірдей ник болмайды.',
+    'name.taken': 'Бұл ник жаңа ғана алынды. Басқасын таңда.',
+    'name.fail': 'Сақталмады. Қайта көр.',
+
+    'nav.home': 'Басты бет',
+    'nav.quests': 'Тапсырмалар',
+    'nav.leaderboard': 'Рейтинг',
+    'nav.store': 'Марапаттар',
+    'nav.main.aria': 'Негізгі мәзір',
+    'nav.bottom.aria': 'Төменгі мәзір',
+    'logout': 'Шығу',
+
+    'greet.night': 'Түнде ояу екенсің',
+    'greet.morning': 'Қайырлы таң',
+    'greet.day': 'Қайырлы күн',
+    'greet.evening': 'Қайырлы кеш',
+    'home.ladder.aria': 'Өсу деңгейлері',
+    'xp.aria': 'Келесі деңгейге дейінгі прогресс',
+    'home.streak': 'Серия',
+    'home.today': 'Бүгін орындалды',
+    'home.toQuests': 'Тапсырмаларға өту',
+    'home.rank': 'Рейтингтегі орның',
+    'home.week': 'Осы апта',
+    'home.month': 'Осы ай',
+    'streak.kept': 'Бүгін тапсырма жасадың, серия сақталды.',
+    'streak.keep': 'Серияң үзілмеуі үшін бүгін бір тапсырма жаса.',
+    'streak.start': 'Бүгін бастасаң, серия бірден жанады.',
+    'plant.next': 'Келесі деңгейге дейін {xp} XP: {name}',
+    'plant.max': 'Ең жоғарғы деңгейге жеттің. Орман өсе береді.',
+    'levelup': 'Жаңа деңгей: {name}',
+    'stage.0.name': 'Дән', 'stage.0.desc': 'Әзірге топырақ астында жатыр. Бір тапсырма орындасаң, оянады.',
+    'stage.1.name': 'Үрпек өскіні', 'stage.1.desc': 'Өскін топырақтан басын көтерді. Серияны үзбей жүре бер.',
+    'stage.2.name': 'Өсімдік', 'stage.2.desc': 'Бұтақтары шыға бастады, енді өзі тұра алады.',
+    'stage.3.name': 'Жас ағаш', 'stage.3.desc': 'Діңі қатайды. Бұл ағашты сен өсірдің.',
+    'stage.4.name': 'Үлкен бәйтерек', 'stage.4.desc': 'Көлеңкесі түсе бастады, астына отыруға болады.',
+    'stage.5.name': 'Эко-орман', 'stage.5.desc': 'Бір ағаш орманға айналды. Ең жоғарғы деңгейге жеттің.',
+
+    'quests.title': 'Қайсысын орындайсың?',
+    'quests.tabs.aria': 'Тапсырма түрі',
+    'quests.tab.day': 'Күнделікті',
+    'quests.tab.week': 'Апталық',
+    'quests.tab.month': 'Айлық',
+    'quests.intro.day': 'Күніне біреуін орындасаң да серия жалғасады. Бір тәулік бос өтсе, серия нөлден басталады. Әр тапсырма +{xp} XP береді.',
+    'quests.intro.week': 'Аптасына бір рет жасайтын, бірақ көбірек XP беретін тапсырмалар: әрқайсысы +{xp} XP. Дүйсенбі күні жаңарады.',
+    'quests.intro.month': 'Айына бір рет жасалатын ірі істер: әрқайсысы +{xp} XP. Әр айдың бірінші күні жаңарады.',
+    'quests.reset.day': 'Ертең жаңарады',
+    'quests.reset.last': 'Бүгін соңғы күн',
+    'quests.reset.left': '{n} күн қалды',
+    'quests.photo.title': 'Сурет туралы.',
+    'quests.photo.body': 'Өзің камерамен түсірген сурет керек. Сайт камера деректерін (EXIF) және түсірілген уақытты тексереді, сондықтан интернеттен алынған сурет, скриншот, мессенджерден келген файл және бұрын жүктелген сурет қабылданбайды. Содан кейін AI Agent кадрда не көрінетінін қарайды: отырған адамға не тапсырмаға қатысы жоқ нәрсеге XP берілмейді.',
+    'quests.model': 'Алғашқы суретте AI Agent өз моделін жүктейді (шамамен 150 МБ, бір рет). Wi-Fi-да жүктегенің дұрыс.',
+    'quests.need': 'Кадрда болсын: {x}',
+    'quests.send': 'Фото есеп жіберу',
+    'quests.done.day': 'Бүгін жасалды',
+    'quests.done.week': 'Осы аптада жасалды',
+    'quests.done.month': 'Осы айда жасалды',
+    'period.progress': '{n} / {m}',
+
+    'q.water_tap.title': 'Су кранын жабу',
+    'q.water_tap.hint': 'Тіс тазалап немесе ыдыс жуып жатқанда суды ағызып қойма: кранды жап.',
+    'q.water_tap.need': 'кран мен раковина',
+    'q.water_tap.seen': 'су краны',
+    'q.eco_bag.title': 'Эко-шоппер қолдану',
+    'q.eco_bag.hint': 'Дүкенге пакет емес, матадан тігілген сөмкемен бар.',
+    'q.eco_bag.need': 'матадан тігілген сөмке',
+    'q.eco_bag.seen': 'эко-сөмке',
+    'q.battery.title': 'Батарея тапсыру',
+    'q.battery.hint': 'Ескі батареяны қоқысқа тастама, жинау жәшігіне сал.',
+    'q.battery.need': 'батарея мен жинау жәшігі',
+    'q.battery.seen': 'батарея',
+    'q.sorting.title': 'Қоқысты сұрыптау',
+    'q.sorting.hint': 'Қағазды, пластикті және шыныны бөлек жәшіктерге бөл.',
+    'q.sorting.need': 'бөлек жәшіктер немесе бөлінген қоқыс',
+    'q.sorting.seen': 'қоқыс жәшіктері',
+    'q.bottle.title': 'Қайта толтырылатын бөтелке',
+    'q.bottle.hint': 'Бір реттік бөтелке сатып алма, өз бөтелкеңе су құй.',
+    'q.bottle.need': 'өз су бөтелкең',
+    'q.bottle.seen': 'су бөтелкесі',
+    'q.lights.title': 'Артық шамды сөндіру',
+    'q.lights.hint': 'Ешкім жоқ бөлмеде жанып тұрған жарықты өшір.',
+    'q.lights.need': 'өшіргіш немесе сөнген шам',
+    'q.lights.seen': 'шам не өшіргіш',
+    'q.w_transport.title': 'Жаяу немесе велосипедпен',
+    'q.w_transport.hint': 'Апта ішінде бір рет мектепке не жұмысқа көлікпен емес, жаяу, велосипедпен немесе қоғамдық көлікпен бар.',
+    'q.w_transport.need': 'велосипед, аялдама немесе жаяу жол',
+    'q.w_transport.seen': 'велосипед не аялдама',
+    'q.w_plant.title': 'Өсімдікті күту',
+    'q.w_plant.hint': 'Үйдегі не аулдағы өсімдікті суар, топырағын босат немесе жаңа гүл отырғыз.',
+    'q.w_plant.need': 'өсімдік пен топырақ',
+    'q.w_plant.seen': 'өсімдік',
+    'q.w_cleanup.title': 'Аулаға көмектесу',
+    'q.w_cleanup.hint': 'Аулада, саябақта не жағалауда қоқыс жина. Толған қапты түсір.',
+    'q.w_cleanup.need': 'қоқыс қабы немесе қолғап',
+    'q.w_cleanup.seen': 'қоқыс қабы',
+    'q.m_tree.title': 'Ағаш отырғыз',
+    'q.m_tree.hint': 'Көшет отырғыз: аулаға, мектепке не саябаққа. Көшет пен орнын түсір.',
+    'q.m_tree.need': 'көшет пен отырғызылған орын',
+    'q.m_tree.seen': 'көшет',
+    'q.m_secondhand.title': 'Заттарға екінші өмір',
+    'q.m_secondhand.hint': 'Киімді не затты керек адамға бер, жөндет немесе қайта пайдалан. Затты түсір.',
+    'q.m_secondhand.need': 'берілетін не жөнделген зат',
+    'q.m_secondhand.seen': 'қайта пайдаланылатын зат',
+    'q.m_cleanup_big.title': 'Бірге тазалау',
+    'q.m_cleanup_big.hint': 'Достарыңмен не сыныптастарыңмен бірге аумақты тазала. Топтық сурет керек.',
+    'q.m_cleanup_big.need': 'бірнеше адам мен қоқыс қаптары',
+    'q.m_cleanup_big.seen': 'тазалау тобы',
+    'seen.person': 'адам (портрет не отырған адам)',
+    'seen.screen': 'экран не скриншот',
+    'seen.random': 'тапсырмаға қатысы жоқ нәрсе',
+
+    'lb.title': 'Кім алда?',
+    'lb.sub': 'XP бойынша алғашқы 50 адам. Сенің жолың сары түспен көрінеді.',
+    'lb.caption': 'XP бойынша қолданушылар рейтингі',
+    'lb.user': 'Қолданушы',
+    'lb.streak': 'Серия',
+    'lb.status': 'Мәртебе',
+    'lb.you': '(сен)',
+    'lb.loading': 'Жүктелуде…',
+    'lb.empty': 'Әзірге ешкім ұпай жинаған жоқ. Бірінші болсаң ше?',
+    'lb.error': 'Рейтингті жүктей алмадым.',
+
+    'store.title': 'Марапаттар дүкені',
+    'store.soon': 'Жақында…',
+    'store.small': 'Жұмыстастық күтеміз!',
+    'store.promo.t': 'Серіктес дүкендердің промокодтары',
+    'store.promo.d': 'Жиналған XP-ді жеңілдік кодына алмастырасың.',
+    'store.bag.t': 'Эко-шоппер сөмкесі',
+    'store.bag.d': 'Матадан тігілген нағыз сөмке үйіңе жетеді.',
+    'store.tree.t': 'Ағаш отырғызу сертификаты',
+    'store.tree.d': 'Сенің атыңа ағаш отырғызылып, сертификат беріледі.',
+
+    'scan.title': 'AI Agent Scanning…',
+    'scan.go': 'Өсімдігімді көру',
+    'scan.format': 'Сурет пішімі мен өлшемі тексерілуде…',
+    'scan.meta': 'Камера деректері мен түсірілген уақыты тексерілуде…',
+    'scan.why.name': 'Файл атауы интернеттен жүктелген суретке ұқсайды.',
+    'scan.why.noExif': 'Суретте камера деректері жоқ. Ол интернеттен алынған, скриншот немесе мессенджерден келген файл болуы мүмкін. Камерамен өзің түсір.',
+    'scan.why.edited': 'Сурет графикалық редакторда өңделген.',
+    'scan.why.noDate': 'Суретте түсірілген уақыт көрсетілмеген.',
+    'scan.why.old': 'Сурет тым ескі. Осы мерзімге жаңа сурет түсір.',
+    'scan.why.future': 'Түсірілген уақыты болашақта тұр. Телефонның күні мен уақытын тексер.',
+    'scan.why.small': 'Сурет тым кішкентай.',
+    'scan.why.dup': 'Дәл осындай сурет бұрын жүктелген.',
+    'scan.print': 'Суреттің цифрлық таңбасы жасалуда…',
+    'scan.model': 'AI моделі дайындалуда…',
+    'scan.modelPct': 'AI моделі жүктелуде… {pct}%',
+    'scan.content': 'Кадрда «{x}» бар-жоғы тексерілуде…',
+    'scan.dupes': 'Дубликаттар базасымен салыстырылуда…',
+    'scan.ok': '✅ AI Agent Растады: Тапсырма қабылданды! +{xp} XP',
+    'scan.fake': '❌ AI Agent: Қате! Сурет интернеттен алынған немесе бұрын қолданылған!',
+    'scan.mismatch': '❌ AI Agent: Қате! Бұл сурет тапсырмаға сай емес. Мен мұнда «{seen}» көрдім, ал кадрда керегі: {need}.',
+    'scan.unexpected': 'Күтпеген қате шықты. Қайта көріп көр.',
+    'err.notImage': 'Тек сурет жүктеуге болады (JPG, PNG, WebP).',
+    'err.tooBig': 'Сурет тым үлкен. 12 МБ-тан аспасын.',
+    'err.unreadable': 'Суретті оқи алмадым. JPG немесе PNG қолданып көр.',
+    'err.https': 'Тексеру үшін сайт HTTPS арқылы ашылуы керек.',
+    'err.already': 'Бұл тапсырманы осы мерзімде жасап қойғансың.',
+    'err.server': 'Серверге қосыла алмадым. Кейінірек қайта көр.',
+    'err.aiLib': 'AI кітапханасы жүктелмеді. Интернетті тексеріп, қайта көр.',
+    'err.aiModel': 'AI моделі жүктелмеді. Интернетті тексеріп, қайта көр.',
+    'err.aiRun': 'Суретті талдай алмадым. Басқа сурет таңдап көр.',
+    'err.profileLoad': 'Профильді жүктеу мүмкін болмады: {c}',
+    'err.profileMake': 'Профиль жасалмады: {c}'
+  },
+
+  ru: {
+    'skip': 'К содержимому',
+    'boot': 'Загрузка…',
+    'close': 'Закрыть',
+    'save': 'Сохранить',
+    'lang.label': 'Язык',
+    'meta.desc': 'Делай по одному эко-заданию в день, копи XP и вырасти свой лес.',
+    'cfg.title': 'Supabase ещё не подключён',
+    'cfg.body': 'Проверь, что файл <code class="rounded bg-moss-100 px-1">config.js</code> лежит рядом с <code class="rounded bg-moss-100 px-1">index.html</code>, а в нём заполнены <code class="rounded bg-moss-100 px-1">SUPABASE_URL</code> и <code class="rounded bg-moss-100 px-1">SUPABASE_ANON_KEY</code>.',
+
+    'auth.aria': 'Вход и регистрация',
+    'auth.h1': 'Одно маленькое дело в день. Семечко понемногу станет лесом.',
+    'auth.p': 'Закрой кран, сдай батарейку куда нужно, пришли фото. За каждое дело дают XP, а растение переходит на следующий уровень.',
+    'auth.tabs.aria': 'Вход или регистрация',
+    'auth.login': 'Войти',
+    'auth.signup': 'Регистрация',
+    'auth.title.login': 'С возвращением',
+    'auth.title.signup': 'Давай начнём',
+    'auth.google': 'Войти через Google',
+    'auth.or': 'или',
+    'auth.submit.login': 'Войти',
+    'auth.submit.signup': 'Зарегистрироваться',
+    'auth.confirmSent': 'Мы отправили письмо для подтверждения. Перейди по ссылке из него, и сможешь войти.',
+    'auth.googleFail': 'Не удалось войти через Google. Попробуй позже.',
+    'f.email': 'Email',
+    'f.username': 'Ник (username)',
+    'f.username.hint': '3–20 символов: строчные латинские буквы, цифры и _',
+    'f.password': 'Пароль',
+    'f.password.hint': 'Минимум 8 символов',
+    'err.email': 'Email указан неверно.',
+    'err.pass8': 'Пароль должен быть не короче 8 символов.',
+    'err.passEmpty': 'Введи пароль.',
+    'err.rate': 'Слишком много попыток. Подожди минуту и попробуй снова.',
+    'err.unconfirmed': 'Email не подтверждён. Перейди по ссылке из письма.',
+    'err.login': 'Неверный email или пароль.',
+    'err.signup': 'Регистрация не удалась. Проверь данные и попробуй ещё раз.',
+    'username.free': 'Ник свободен',
+    'username.taken': 'Этот ник занят. Выбери другой',
+    'username.checkFail': 'Не получилось проверить ник. Проверь интернет',
+    'name.title': 'Придумай себе ник',
+    'name.p': 'Под этим именем тебя увидят в рейтинге. Одинаковых ников не бывает.',
+    'name.taken': 'Этот ник только что заняли. Выбери другой.',
+    'name.fail': 'Не сохранилось. Попробуй ещё раз.',
+
+    'nav.home': 'Главная',
+    'nav.quests': 'Задания',
+    'nav.leaderboard': 'Рейтинг',
+    'nav.store': 'Награды',
+    'nav.main.aria': 'Главное меню',
+    'nav.bottom.aria': 'Нижнее меню',
+    'logout': 'Выйти',
+
+    'greet.night': 'Не спится',
+    'greet.morning': 'Доброе утро',
+    'greet.day': 'Добрый день',
+    'greet.evening': 'Добрый вечер',
+    'home.ladder.aria': 'Уровни роста',
+    'xp.aria': 'Прогресс до следующего уровня',
+    'home.streak': 'Серия',
+    'home.today': 'Сегодня выполнено',
+    'home.toQuests': 'К заданиям',
+    'home.rank': 'Твоё место в рейтинге',
+    'home.week': 'Эта неделя',
+    'home.month': 'Этот месяц',
+    'streak.kept': 'Сегодня задание уже сделано, серия сохранена.',
+    'streak.keep': 'Чтобы серия не прервалась, выполни сегодня хотя бы одно задание.',
+    'streak.start': 'Начни сегодня, и серия сразу загорится.',
+    'plant.next': 'До следующего уровня {xp} XP: {name}',
+    'plant.max': 'Ты на высшем уровне. Лес продолжит расти.',
+    'levelup': 'Новый уровень: {name}',
+    'stage.0.name': 'Семечко', 'stage.0.desc': 'Пока лежит под землёй. Выполни одно задание, и оно проснётся.',
+    'stage.1.name': 'Росток', 'stage.1.desc': 'Росток показался из земли. Не прерывай серию.',
+    'stage.2.name': 'Растение', 'stage.2.desc': 'Появились веточки, теперь оно держится само.',
+    'stage.3.name': 'Молодое дерево', 'stage.3.desc': 'Ствол окреп. Это дерево вырастил ты.',
+    'stage.4.name': 'Большое дерево', 'stage.4.desc': 'Дерево даёт тень, под ним уже можно сидеть.',
+    'stage.5.name': 'Эко-лес', 'stage.5.desc': 'Одно дерево стало лесом. Выше уровня нет.',
+
+    'quests.title': 'Что сделаешь?',
+    'quests.tabs.aria': 'Тип заданий',
+    'quests.tab.day': 'Ежедневные',
+    'quests.tab.week': 'Недельные',
+    'quests.tab.month': 'Месячные',
+    'quests.intro.day': 'Одного задания в день хватает, чтобы серия шла дальше. Пропустишь сутки, и серия начнётся с нуля. Каждое задание даёт +{xp} XP.',
+    'quests.intro.week': 'Задания раз в неделю, зато с большей наградой: +{xp} XP за каждое. Обновляются по понедельникам.',
+    'quests.intro.month': 'Крупные дела раз в месяц: +{xp} XP за каждое. Обновляются первого числа.',
+    'quests.reset.day': 'Обновятся завтра',
+    'quests.reset.last': 'Сегодня последний день',
+    'quests.reset.left': 'Осталось {n} {days}',
+    'quests.photo.title': 'О фото.',
+    'quests.photo.body': 'Нужно фото, снятое тобой на камеру. Сайт проверяет данные камеры (EXIF) и время съёмки, поэтому картинки из интернета, скриншоты, файлы из мессенджеров и уже загруженные фото не принимаются. Потом AI-агент смотрит, что в кадре: за сидящего человека или что-то не по теме XP не дают.',
+    'quests.model': 'При первом фото AI-агент скачает свою модель (около 150 МБ, один раз). Лучше делать это по Wi-Fi.',
+    'quests.need': 'В кадре должно быть: {x}',
+    'quests.send': 'Отправить фото-отчёт',
+    'quests.done.day': 'Сегодня сделано',
+    'quests.done.week': 'На этой неделе сделано',
+    'quests.done.month': 'В этом месяце сделано',
+    'period.progress': '{n} из {m}',
+
+    'q.water_tap.title': 'Закрыть кран',
+    'q.water_tap.hint': 'Когда чистишь зубы или моешь посуду, не лей воду впустую: закрой кран.',
+    'q.water_tap.need': 'кран и раковина',
+    'q.water_tap.seen': 'водопроводный кран',
+    'q.eco_bag.title': 'Эко-шопер вместо пакета',
+    'q.eco_bag.hint': 'Иди в магазин с тканевой сумкой, а не с пластиковым пакетом.',
+    'q.eco_bag.need': 'тканевая сумка',
+    'q.eco_bag.seen': 'эко-сумка',
+    'q.battery.title': 'Сдать батарейки',
+    'q.battery.hint': 'Не выбрасывай старые батарейки в мусор, а опусти их в контейнер для сбора.',
+    'q.battery.need': 'батарейки и контейнер для сбора',
+    'q.battery.seen': 'батарейки',
+    'q.sorting.title': 'Сортировка мусора',
+    'q.sorting.hint': 'Раздели бумагу, пластик и стекло по разным контейнерам.',
+    'q.sorting.need': 'отдельные контейнеры или разобранный мусор',
+    'q.sorting.seen': 'контейнеры для мусора',
+    'q.bottle.title': 'Своя бутылка',
+    'q.bottle.hint': 'Не покупай одноразовую бутылку, налей воду в свою.',
+    'q.bottle.need': 'твоя бутылка для воды',
+    'q.bottle.seen': 'бутылка для воды',
+    'q.lights.title': 'Выключить лишний свет',
+    'q.lights.hint': 'Выключи свет в комнате, где никого нет.',
+    'q.lights.need': 'выключатель или погасшая лампа',
+    'q.lights.seen': 'лампа или выключатель',
+    'q.w_transport.title': 'Пешком или на велосипеде',
+    'q.w_transport.hint': 'Один раз за неделю доберись до школы или работы не на машине: пешком, на велосипеде или общественным транспортом.',
+    'q.w_transport.need': 'велосипед, остановка или пешеходная дорожка',
+    'q.w_transport.seen': 'велосипед или остановка',
+    'q.w_plant.title': 'Уход за растением',
+    'q.w_plant.hint': 'Полей растение дома или во дворе, разрыхли землю или посади новый цветок.',
+    'q.w_plant.need': 'растение и земля',
+    'q.w_plant.seen': 'растение',
+    'q.w_cleanup.title': 'Уборка во дворе',
+    'q.w_cleanup.hint': 'Собери мусор во дворе, в парке или на берегу. Сфотографируй полный пакет.',
+    'q.w_cleanup.need': 'мешок с мусором или перчатки',
+    'q.w_cleanup.seen': 'мешок с мусором',
+    'q.m_tree.title': 'Посади дерево',
+    'q.m_tree.hint': 'Посади саженец во дворе, у школы или в парке. Сфотографируй саженец и место посадки.',
+    'q.m_tree.need': 'саженец и место посадки',
+    'q.m_tree.seen': 'саженец',
+    'q.m_secondhand.title': 'Вторая жизнь вещей',
+    'q.m_secondhand.hint': 'Отдай одежду или вещь тому, кому она нужна, почини её или найди ей новое применение. Сфотографируй вещь.',
+    'q.m_secondhand.need': 'отдаваемая или починенная вещь',
+    'q.m_secondhand.seen': 'вещь для повторного использования',
+    'q.m_cleanup_big.title': 'Уборка командой',
+    'q.m_cleanup_big.hint': 'Убери территорию вместе с друзьями или одноклассниками. Нужно общее фото.',
+    'q.m_cleanup_big.need': 'несколько человек и мешки с мусором',
+    'q.m_cleanup_big.seen': 'группа на уборке',
+    'seen.person': 'человек (портрет или сидящий человек)',
+    'seen.screen': 'экран или скриншот',
+    'seen.random': 'что-то не по теме задания',
+
+    'lb.title': 'Кто впереди?',
+    'lb.sub': 'Первые 50 игроков по XP. Твоя строка выделена жёлтым.',
+    'lb.caption': 'Рейтинг игроков по XP',
+    'lb.user': 'Игрок',
+    'lb.streak': 'Серия',
+    'lb.status': 'Статус',
+    'lb.you': '(ты)',
+    'lb.loading': 'Загрузка…',
+    'lb.empty': 'Пока никто не набрал очков. Может, ты будешь первым?',
+    'lb.error': 'Не получилось загрузить рейтинг.',
+
+    'store.title': 'Магазин наград',
+    'store.soon': 'Скоро…',
+    'store.small': 'Ждём сотрудничества!',
+    'store.promo.t': 'Промокоды магазинов-партнёров',
+    'store.promo.d': 'Меняешь накопленные XP на скидочный код.',
+    'store.bag.t': 'Эко-шопер',
+    'store.bag.d': 'Настоящая тканевая сумка приедет к тебе домой.',
+    'store.tree.t': 'Сертификат на посадку дерева',
+    'store.tree.d': 'Дерево посадят на твоё имя и выдадут сертификат.',
+
+    'scan.title': 'AI-агент сканирует…',
+    'scan.go': 'Посмотреть растение',
+    'scan.format': 'Проверяю формат и размер фото…',
+    'scan.meta': 'Проверяю данные камеры и время съёмки…',
+    'scan.why.name': 'Имя файла похоже на картинку из интернета.',
+    'scan.why.noExif': 'В фото нет данных камеры. Похоже на картинку из интернета, скриншот или файл из мессенджера. Сними сам на камеру.',
+    'scan.why.edited': 'Фото обработано в графическом редакторе.',
+    'scan.why.noDate': 'В фото не указано время съёмки.',
+    'scan.why.old': 'Фото слишком старое. Сними новое для этого периода.',
+    'scan.why.future': 'Время съёмки стоит в будущем. Проверь дату и время на телефоне.',
+    'scan.why.small': 'Фото слишком маленькое.',
+    'scan.why.dup': 'Такое фото уже загружали.',
+    'scan.print': 'Считаю цифровой отпечаток фото…',
+    'scan.model': 'Готовлю AI-модель…',
+    'scan.modelPct': 'Скачиваю AI-модель… {pct}%',
+    'scan.content': 'Проверяю, есть ли в кадре «{x}»…',
+    'scan.dupes': 'Сравниваю с базой дубликатов…',
+    'scan.ok': '✅ AI-агент подтвердил: задание принято! +{xp} XP',
+    'scan.fake': '❌ AI-агент: ошибка! Фото взято из интернета или уже использовалось!',
+    'scan.mismatch': '❌ AI-агент: ошибка! Фото не подходит к заданию. Я вижу здесь «{seen}», а в кадре должно быть: {need}.',
+    'scan.unexpected': 'Произошла непредвиденная ошибка. Попробуй ещё раз.',
+    'err.notImage': 'Можно загружать только изображения (JPG, PNG, WebP).',
+    'err.tooBig': 'Фото слишком большое. Нужно не больше 12 МБ.',
+    'err.unreadable': 'Не получилось открыть фото. Попробуй JPG или PNG.',
+    'err.https': 'Для проверки сайт должен открываться по HTTPS.',
+    'err.already': 'Это задание в текущем периоде уже выполнено.',
+    'err.server': 'Не получилось связаться с сервером. Попробуй позже.',
+    'err.aiLib': 'Не загрузилась AI-библиотека. Проверь интернет и попробуй снова.',
+    'err.aiModel': 'Не загрузилась AI-модель. Проверь интернет и попробуй снова.',
+    'err.aiRun': 'Не получилось разобрать фото. Попробуй другое.',
+    'err.profileLoad': 'Не удалось загрузить профиль: {c}',
+    'err.profileMake': 'Не удалось создать профиль: {c}'
+  }
+};
+
+const I18n = {
+  lang: 'kk',
+
+  init() {
+    let l = null;
+    try { l = localStorage.getItem('eco-lang'); } catch {  }
+    if (l !== 'kk' && l !== 'ru') l = (navigator.language || '').toLowerCase().startsWith('ru') ? 'ru' : 'kk';
+    this.lang = l;
+    document.documentElement.lang = l;
+  },
+
+  set(l) {
+    if (l === this.lang) return;
+    this.lang = l;
+    try { localStorage.setItem('eco-lang', l); } catch {  }
+    document.documentElement.lang = l;
+    App.relang();
+  },
+
+  apply(root = document) {
+    $$('[data-i18n]', root).forEach(el => { el.textContent = t(el.dataset.i18n); });
+    $$('[data-i18n-html]', root).forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+    $$('[data-i18n-aria]', root).forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+    $$('[data-lang]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === this.lang)));
+    const meta = $('meta[name="description"]'); if (meta) meta.setAttribute('content', t('meta.desc'));
+  }
+};
+
+const t = (key, vars) => {
+  let s = (DICT[I18n.lang] && DICT[I18n.lang][key]);
+  if (s == null) s = DICT.kk[key];
+  if (s == null) s = key;
+  return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m)) : s;
+};
+
+function daysWord(n) {
+  if (I18n.lang !== 'ru') return 'күн';
+  const a = Math.abs(n) % 100, b = a % 10;
+  return a > 10 && a < 20 ? 'дней' : b === 1 ? 'день' : b >= 2 && b <= 4 ? 'дня' : 'дней';
+}
+
+function greeting() {
+  const h = Number(hourFmt.format(new Date())) % 24;
+  return t(h < 5 ? 'greet.night' : h < 12 ? 'greet.morning' : h < 18 ? 'greet.day' : 'greet.evening');
+}
+
+const ICONS = {
+  leaf:   '<path d="M11 20A7 7 0 0 1 4 13c0-6 6-9 16-10 0 10-3 17-9 17z"/><path d="M4 21c3-6 6-9 11-12"/>',
+  home:   '<path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+  quests: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="m9 14 2 2 4-4"/>',
+  trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+  gift:   '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+  bag:    '<path d="M5 8h14l1 13H4z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/>',
+  check:  '<path d="m5 12 5 5 9-10"/>',
+  lock:   '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  tap:    '<path d="M3 9h9a4 4 0 0 1 4 4v2"/><path d="M5 9V6h5v3"/><path d="M7.5 6V4M5.5 4h4"/><path d="M16 18.2c-1.1 1.3-1.8 2.2-1.8 3a1.8 1.8 0 0 0 3.6 0c0-.8-.7-1.7-1.8-3z"/>',
+  ecobag: '<path d="M5 8h14l1 13H4z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M12 18c-2.4-1.2-2.4-4.2 0-6 2.4 1.8 2.4 4.8 0 6z"/>',
+  battery:'<rect x="7" y="6" width="10" height="16" rx="1.5"/><path d="M10 3h4v3h-4z"/><path d="m12.5 10-2 3.5h3l-2 3.5"/>',
+  bins:   '<path d="M3 21h18"/><path d="M4 11h4v10H4zM10 8h4v13h-4zM16 13h4v8h-4z"/>',
+  bottle: '<path d="M10 2.5h4V6l2 3v11.5a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V9l2-3z"/><path d="M8 14c1.3 1 2.7 1 4 0s2.7-1 4 0"/>',
+  bulb:   '<path d="M9 18h6M10 21.5h4"/><path d="M12 2.5a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2v.5h5v-.5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 2.5z"/>',
+  bike:   '<circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-8h5l3 8M10 8H8M13 12l-3 4"/>',
+  sprout: '<path d="M12 21v-9"/><path d="M12 12c0-4-3-6-7-6 0 4 3 6 7 6z"/><path d="M12 14c0-3 2.5-5 6-5 0 3-2.5 5-6 5z"/>',
+  trash:  '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',
+  tree:   '<path d="M12 21v-6"/><path d="M12 15a6 6 0 1 0-5.2-9 4.5 4.5 0 0 0 .6 8.2A4.5 4.5 0 0 0 12 15z"/>',
+  recycle:'<path d="M7 19l-3-5 3-5M7 19h6M4 14h5M17 5l3 5-3 5M17 5h-6M20 10h-5M14 4l-2 3M12 20l2-3"/>',
+  group:  '<circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 5.5 1.8 5.5 5.5"/>'
+};
+const icon = (name, cls = 'h-5 w-5') =>
+  `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+
+const flame = (cls = 'h-5 w-5') =>
+  `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c.8 3.6 5.2 5.6 5.2 10.6A5.2 5.2 0 0 1 6.8 13c0-2.2 1.2-3.4 2.2-4.6.3 1.6 1.1 2.2 2 2.2C10.4 7.6 10.8 4.8 12 2z" fill="url(#gFlame)"/><path d="M12 22a3.6 3.6 0 0 1-3.6-3.6c0-1.9 1.4-2.9 2.2-4 .6 1.1 1.1 1.4 1.7 1.4 1.7.7 3.3 1.9 3.3 3.2A3.6 3.6 0 0 1 12 22z" fill="#ffe08a" opacity=".9"/></svg>`;
+
+const hydrateIcons = (root = document) => {
+  $$('[data-icon]', root).forEach(el => { el.innerHTML = icon(el.dataset.icon, el.dataset.class); el.removeAttribute('data-icon'); });
+  $$('[data-flame]', root).forEach(el => { el.innerHTML = flame(el.dataset.flame); el.removeAttribute('data-flame'); });
+};
+
+const Toast = {
+  show(text, kind = 'info') {
+    const el = document.createElement('div');
+    el.className = 'pointer-events-auto max-w-md rounded-lg px-4 py-3 font-bold shadow-lg ' +
+      (kind === 'error' ? 'bg-red-700 text-white' : kind === 'ok' ? 'bg-moss-800 text-white' : 'bg-ink text-white');
+    el.textContent = text;
+    $('#toasts').appendChild(el);
+    setTimeout(() => el.remove(), 4500);
+  }
+};
+
+const Reveal = {
+  io: null,
+  init() {
+    if (reduceMotion() || !('IntersectionObserver' in window)) return;
+    this.io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); this.io.unobserve(e.target); } });
+    }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+  },
+
+  replay(section) {
+    const els = $$('[data-reveal]', section);
+    els.forEach((el, i) => {
+      el.style.setProperty('--d', Math.min(i, 8) * 70 + 'ms');
+      if (!this.io) { el.classList.add('in'); return; }
+      el.classList.remove('in');
+      this.io.unobserve(el);
+    });
+    void section.offsetWidth;
+    if (this.io) els.forEach(el => this.io.observe(el));
+  }
+};
+
+function leafBurst(host, n = 14, origin = { left: '50%', bottom: '8rem' }) {
+  if (reduceMotion() || !host.animate) return;
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement('span');
+    el.className = 'pointer-events-none absolute z-10 ' + (i % 4 === 0 ? 'text-sun-500' : 'text-moss-600');
+    Object.assign(el.style, origin);
+    el.innerHTML = icon('leaf', 'h-5 w-5');
+    host.appendChild(el);
+    const ang = (-90 + (Math.random() - 0.5) * 150) * Math.PI / 180;
+    const dist = 90 + Math.random() * 120;
+    const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist, rot = (Math.random() - 0.5) * 420;
+    const a = el.animate([
+      { transform: 'translate(0,0) rotate(0deg) scale(.6)', opacity: 1 },
+      { transform: `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(1)`, opacity: 1, offset: 0.55 },
+      { transform: `translate(${dx * 1.1}px,${dy + 70}px) rotate(${rot * 1.3}deg) scale(.9)`, opacity: 0 }
+    ], { duration: 1100 + Math.random() * 700, easing: 'cubic-bezier(.2,.7,.3,1)' });
+    a.onfinish = () => el.remove();
+  }
+}
+
+const rng = (seed) => () => {
+  seed = (seed + 0x6D2B79F5) | 0;
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+const r1 = (v) => Math.round(v * 10) / 10;
+
+const Art = {
+
+  VB: ['50 160 140 80', '50 130 140 110', '40 90 160 150', '30 50 180 190', '20 0 200 240', '0 0 240 240'],
+
+  leaf(x, y, len, w, ang, g = 'gLeaf') {
+    const a = r1(w), b = r1(w * 0.82);
+    const veins = [0.3, 0.52, 0.74].map(t => `M0 ${r1(-len * t)}l${r1(w * 0.5)} ${r1(-len * 0.13)}M0 ${r1(-len * t)}l${r1(-w * 0.5)} ${r1(-len * 0.13)}`).join('');
+    return `<g transform="translate(${x} ${y}) rotate(${ang})"><g class="sw">` +
+      `<path d="M0 0C${a} ${r1(-len * 0.22)} ${b} ${r1(-len * 0.78)} 0 ${-len}C${-b} ${r1(-len * 0.78)} ${-a} ${r1(-len * 0.22)} 0 0Z" fill="url(#${g})"/>` +
+      `<path d="M0 -1L0 ${r1(-len * 0.9)}${veins}" stroke="#fff" stroke-opacity=".3" stroke-width=".9" fill="none" stroke-linecap="round"/></g></g>`;
+  },
+
+  blob(cx, cy, r, g = 'gCan') {
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${g})"/>` +
+      (g === 'gCan' ? `<ellipse cx="${r1(cx - r * 0.3)}" cy="${r1(cy - r * 0.38)}" rx="${r1(r * 0.38)}" ry="${r1(r * 0.2)}" fill="#fff" opacity=".16" transform="rotate(-20 ${cx} ${cy})"/>` : '');
+  },
+
+  flower(x, y, r, col) {
+    let s = '';
+    for (let i = 0; i < 5; i++) {
+      const a = (i * 72 - 90) * Math.PI / 180;
+      s += `<circle cx="${r1(x + Math.cos(a) * r)}" cy="${r1(y + Math.sin(a) * r)}" r="${r1(r * 0.62)}" fill="${col}"/>`;
+    }
+    return s + `<circle cx="${x}" cy="${y}" r="${r1(r * 0.5)}" fill="#f4c430"/>`;
+  },
+
+  star(x, y, s, delay) {
+    return `<g transform="translate(${x} ${y}) scale(${s})"><path class="tw" style="animation-delay:${delay}s" d="M0 -6L1.6 -1.6L6 0L1.6 1.6L0 6L-1.6 1.6L-6 0L-1.6 -1.6Z" fill="#fff3b0"/></g>`;
+  },
+
+  stem(d, w, col = '#3f9a5a') {
+    return `<path d="${d}" stroke="${col}" stroke-width="${w}" fill="none" stroke-linecap="round"/>` +
+      `<path d="${d}" stroke="#a6e3a8" stroke-opacity=".45" stroke-width="${r1(w * 0.28)}" fill="none" stroke-linecap="round" transform="translate(${r1(w * 0.18)} 0)"/>`;
+  },
+
+  ground(rx = 60, shadow = true) {
+    const L = 120 - rx, R = 120 + rx;
+    return (shadow ? `<ellipse cx="120" cy="232" rx="${rx + 8}" ry="8" fill="#000" opacity=".15"/>` : '') +
+      `<path d="M${L} 234C${r1(L + rx * 0.4)} 216 ${r1(L + rx * 0.75)} 207 120 207C${r1(R - rx * 0.75)} 207 ${r1(R - rx * 0.4)} 216 ${R} 234Z" fill="url(#gSoil)"/>` +
+      `<path d="M${r1(L + rx * 0.28)} 222C${r1(L + rx * 0.55)} 212 ${r1(L + rx * 0.85)} 209 120 209" stroke="#fff" stroke-opacity=".16" stroke-width="2" fill="none" stroke-linecap="round"/>` +
+      `<circle cx="${r1(120 - rx * 0.45)}" cy="224" r="2.4" fill="#3d2c1c" opacity=".55"/><circle cx="${r1(120 + rx * 0.5)}" cy="222" r="2" fill="#3d2c1c" opacity=".5"/><circle cx="${r1(120 + rx * 0.2)}" cy="228" r="1.6" fill="#3d2c1c" opacity=".5"/>`;
+  },
+
+  pine(cx, base, h, w) {
+    let s = `<rect x="${r1(cx - w * 0.06)}" y="${r1(base - h * 0.2)}" width="${r1(w * 0.12)}" height="${r1(h * 0.2 + 6)}" rx="2" fill="url(#gTrunk)"/>`;
+    for (let k = 0; k < 4; k++) {
+      const bottom = base - h * 0.12 - (3 - k) * h * 0.17;
+      const top = bottom - h * 0.34;
+      const hw = (w / 2) * (0.46 + 0.17 * k);
+      s += `<path d="M${cx} ${r1(top)}L${r1(cx + hw)} ${r1(bottom)}Q${cx} ${r1(bottom + h * 0.05)} ${r1(cx - hw)} ${r1(bottom)}Z" fill="url(#gPine)"/>` +
+           `<path d="M${cx} ${r1(top + 2)}L${r1(cx - hw * 0.86)} ${r1(bottom - 2)}" stroke="#fff" stroke-opacity=".16" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+    }
+    return `<g class="sw">${s}</g>`;
+  },
+
+  stages: [
+
+    function () {
+      return this.ground(58) +
+        `<g transform="rotate(-14 120 204)"><ellipse cx="120" cy="203" rx="17" ry="11" fill="url(#gSeed)"/>` +
+        `<path d="M104 203Q120 198 136 203" stroke="#4a2c12" stroke-opacity=".45" stroke-width="1.4" fill="none"/>` +
+        `<ellipse cx="113" cy="198" rx="6" ry="2.4" fill="#fff" opacity=".35"/></g>` +
+        `<path d="M96 214q9-9 24-6q15-3 26 6z" fill="#6f5238"/>` +
+        `<path d="M104 213q3-3 6-1M128 212q3-2 6 0" stroke="#4d3826" stroke-width="1.2" fill="none" stroke-linecap="round"/>` +
+        this.star(152, 178, 1, 0) + this.star(90, 186, 0.7, 1.1) + this.star(138, 160, 0.55, 0.5);
+    },
+
+    function () {
+      return this.ground(60) +
+        this.stem('M120 212C119 196 118 180 122 164', 4.6) +
+        `<ellipse cx="139" cy="209" rx="7" ry="3.6" fill="#a67443" transform="rotate(18 139 209)"/>` +
+        this.leaf(122, 166, 22, 9, -16) + this.leaf(122, 165, 18, 7, 20, 'gLeafD') +
+        this.leaf(122, 168, 38, 16, -70, 'gLeafD') + this.leaf(122, 168, 38, 16, 66) +
+        `<circle cx="95.5" cy="158" r="2.4" fill="#d9f2ff" opacity=".85"/><circle cx="94.8" cy="157.2" r=".8" fill="#fff"/>` +
+        this.star(150, 176, 0.8, 0.3);
+    },
+
+    function () {
+      return this.ground(64) +
+        this.stem('M120 214C121 190 117 160 121 112', 5.4) +
+        this.leaf(120, 198, 40, 17, -64, 'gLeafD') + this.leaf(120, 194, 40, 17, 62) +
+        this.leaf(119.4, 172, 46, 19, -58) + this.leaf(119.4, 166, 46, 19, 56, 'gLeafD') +
+        this.leaf(119.3, 148, 44, 18, -52, 'gLeafD') + this.leaf(119.3, 140, 44, 18, 50) +
+        this.leaf(121, 116, 34, 13, -22) + this.leaf(121, 116, 34, 13, 24, 'gLeafD') + this.leaf(121, 114, 30, 11, 0) +
+        `<path d="M120 130Q108 124 101 108M121 122Q134 118 142 106" stroke="#3f9a5a" stroke-width="1.8" fill="none" stroke-linecap="round"/>` +
+        this.flower(101, 106, 5, '#ffffff') + this.flower(142, 104, 4.6, '#ffc2d9');
+    },
+
+    function () {
+      const trunk = 'M108 230C115 224 116 204 117 176C117.5 160 118 150 119 138L126 138C127 150 127.5 160 128 176C129 204 130 224 138 230C128 234 118 234 108 230Z';
+      const back = [[90, 118, 24], [154, 116, 24], [122, 80, 28]].map(([x, y, r]) => this.blob(x, y, r, 'gCanD')).join('');
+      const front = [[122, 108, 34], [96, 100, 24], [148, 98, 24], [122, 74, 24], [104, 126, 20], [140, 126, 20]].map(([x, y, r]) => this.blob(x, y, r)).join('');
+      return this.ground(68) +
+        `<rect x="143" y="150" width="4.5" height="80" rx="1.6" fill="#c79a62"/><rect x="143" y="150" width="1.6" height="80" rx="1" fill="#fff" opacity=".25"/>` +
+        `<path d="${trunk}" fill="url(#gTrunk)"/>` +
+        `<path d="M120 222C121 200 121 180 121.5 150M124 214C125 196 125 176 124 156" stroke="#2c1a0c" stroke-opacity=".28" stroke-width="1.2" fill="none" stroke-linecap="round"/>` +
+        `<path d="M128 172L143.5 168" stroke="#efe2bd" stroke-width="2.2" stroke-linecap="round"/><circle cx="143.5" cy="168" r="2" fill="#d8c48e"/>` +
+        `<path d="M121 150C111 142 103 134 98 124" stroke="#7a5535" stroke-width="4" fill="none" stroke-linecap="round"/>` +
+        `<path d="M124 144C134 136 142 130 149 120" stroke="#7a5535" stroke-width="4" fill="none" stroke-linecap="round"/>` +
+        `<g class="sw">${back}${front}</g>`;
+    },
+
+    function () {
+      const trunk = 'M90 231C103 226 108 214 108 196C108 172 105 150 107 124L137 124C139 150 136 172 136 196C136 214 141 226 154 231C138 237 106 237 90 231Z';
+      const back = [[70, 88, 34], [170, 88, 34], [120, 46, 38], [88, 62, 32], [152, 62, 32]].map(([x, y, r]) => this.blob(x, y, r, 'gCanD')).join('');
+      const front = [[120, 86, 44], [80, 102, 32], [160, 102, 32], [104, 58, 32], [136, 58, 32], [120, 112, 30], [60, 94, 22], [180, 94, 22]].map(([x, y, r]) => this.blob(x, y, r)).join('');
+      const apples = [[88, 94], [150, 72], [112, 108], [168, 106], [74, 78], [132, 54], [104, 72]].map(([x, y]) =>
+        `<circle cx="${x}" cy="${y}" r="5" fill="url(#gApple)"/><circle cx="${x - 1.6}" cy="${y - 1.8}" r="1.2" fill="#fff" opacity=".65"/>` +
+        `<path d="M${x} ${y - 5}q1.5-2.5 3-3" stroke="#3a6b2c" stroke-width="1.2" fill="none" stroke-linecap="round"/>`).join('');
+      return this.ground(80) +
+        `<path d="${trunk}" fill="url(#gTrunk)"/>` +
+        `<path d="M116 228C117 200 115 170 117 134M124 230C125 204 124 170 124 130M131 228C132 206 131 178 132 136" stroke="#2c1a0c" stroke-opacity=".25" stroke-width="1.4" fill="none" stroke-linecap="round"/>` +
+        `<ellipse cx="127" cy="176" rx="3.2" ry="5" fill="#2c1a0c" opacity=".5"/>` +
+        `<g class="sw">${back}${front}${apples}</g>` +
+        `<path d="M136 152C152 150 170 148 190 143" stroke="#7a5535" stroke-width="9" fill="none" stroke-linecap="round"/>` +
+        `<path d="M136 150C152 148 170 146 190 141" stroke="#fff" stroke-opacity=".12" stroke-width="2" fill="none" stroke-linecap="round"/>` +
+        `<g class="swing"><path d="M170 148V203M188 145V203" stroke="#eadbb5" stroke-width="1.5"/>` +
+        `<rect x="164" y="203" width="30" height="6" rx="2" fill="#a67443"/><rect x="164" y="203" width="30" height="2" rx="1" fill="#fff" opacity=".25"/></g>`;
+    },
+
+    function () {
+      const rt = `<path d="M180 228C182 210 183 198 183 184L190 184C190 198 191 210 193 228Z" fill="url(#gTrunk)"/>`;
+      const rc = [[168, 166, 20, 'gCanD'], [204, 168, 18, 'gCanD'], [186, 148, 22, 'gCanD'], [186, 166, 26], [170, 154, 18], [202, 156, 18], [186, 140, 18]]
+        .map(([x, y, r, g]) => this.blob(x, y, r, g || 'gCan')).join('');
+      return this.ground(106) +
+        this.pine(56, 226, 130, 66) +
+        rt + `<g class="sw">${rc}</g>` +
+        this.pine(120, 226, 206, 98) +
+        this.blob(26, 222, 14, 'gCanD') + this.blob(40, 226, 11) + this.blob(210, 226, 11) + this.blob(224, 222, 13, 'gCanD') +
+        `<path d="M76 229v-5M100 231v-6M147 230v-5M168 231v-6" stroke="#3f9a5a" stroke-width="1.2"/>` +
+        this.flower(76, 223, 3.4, '#fff') + this.flower(100, 225, 3, '#ff9eb5') + this.flower(147, 224, 3.2, '#ffd166') + this.flower(168, 225, 3, '#fff') +
+        `<rect x="88.5" y="226" width="3" height="6" rx="1" fill="#f3e9d2"/><path d="M82 227a8 6 0 0 1 16 0z" fill="#d64545"/>` +
+        `<circle cx="87" cy="224" r="1.2" fill="#fff"/><circle cx="92" cy="225" r="1" fill="#fff"/>`;
+    }
+  ],
+
+  svg(i, mini = false) {
+    const vb = mini ? this.VB[i] : '0 0 240 240';
+    return `<svg viewBox="${vb}" width="100%" height="100%" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false" style="display:block">${this.stages[i].call(this)}</svg>`;
+  }
+};
+
+const Scene = {
+  t: 'day',
+  _fx: '',
+
+  theme() {
+    const h = Number(hourFmt.format(new Date())) % 24;
+    return h < 5 || h >= 21 ? 'night' : h < 9 ? 'dawn' : h < 17 ? 'day' : 'eve';
+  },
+
+  build(forceTheme) {
+    const t = this.t = forceTheme || this.theme();
+    $('#scene-sky').className = 'absolute inset-0 sky-' + t;
+
+    const R = rng(7);
+    let objs = '';
+    if (t === 'night') {
+      objs += `<div class="absolute" style="right:12%;top:12%;width:56px;height:56px"><svg viewBox="-28 -28 56 56"><circle r="26" fill="#f3f1e0" opacity=".12"/><circle r="16" fill="#f3f1e0"/><circle cx="-5" cy="-3" r="3.2" fill="#d8d5bd"/><circle cx="5" cy="5" r="2.4" fill="#d8d5bd"/><circle cx="4" cy="-7" r="1.6" fill="#d8d5bd"/></svg></div>`;
+      for (let i = 0; i < 26; i++) {
+        const s = r1(1 + R() * 1.6);
+        objs += `<span class="tw absolute rounded-full bg-white" style="left:${r1(R() * 96 + 2)}%;top:${r1(R() * 50 + 2)}%;width:${s}px;height:${s}px;animation-delay:${r1(R() * 3)}s"></span>`;
+      }
+    } else {
+      const pos = t === 'dawn' ? 'left:10%;top:46%' : t === 'eve' ? 'right:10%;top:44%' : 'right:11%;top:9%';
+      const rays = Array.from({ length: 12 }, (_, k) => `<line x1="0" y1="-26" x2="0" y2="-36" transform="rotate(${k * 30})"/>`).join('');
+      objs += `<div class="absolute" style="${pos};width:92px;height:92px"><svg viewBox="-46 -46 92 92"><g class="rays" stroke="#f4c430" stroke-width="3.2" stroke-linecap="round">${rays}</g><circle r="20" fill="url(#gSun)"/></svg></div>`;
+    }
+    const cloudCol = t === 'night' ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.85)';
+    objs += [[6, 18, 96, 40], [44, 40, 66, 56], [70, 24, 80, 48]]
+      .map(([l, tp, w, d]) => `<div class="cloud" style="left:${l}%;top:${tp}px;width:${w}px;background:${cloudCol};animation-duration:${d}s"></div>`).join('');
+    $('#scene-objs').innerHTML = objs;
+
+    const RS = rng(21);
+    let pebbles = '';
+    for (let i = 0; i < 24; i++) {
+      pebbles += `<ellipse cx="${r1(RS() * 800)}" cy="${r1(352 + RS() * 28)}" rx="${r1(2 + RS() * 3)}" ry="${r1(1.2 + RS() * 1.6)}" fill="#3d2c1c" opacity=".45"/>`;
+    }
+    $('#scene-land').innerHTML =
+      `<svg viewBox="0 0 800 384" preserveAspectRatio="xMidYMax slice" class="absolute inset-0 h-full w-full" aria-hidden="true">` +
+      `<path d="M0 250C120 200 240 210 360 235C480 260 600 190 800 228L800 384L0 384Z" fill="#cfe6d3"/>` +
+      `<path d="M0 292C140 250 260 262 400 280C540 298 660 252 800 276L800 384L0 384Z" fill="#a9d3b0"/>` +
+      `<path d="M0 330C160 306 320 318 480 326C620 334 720 312 800 322L800 384L0 384Z" fill="#86c295"/>` +
+      `<path d="M0 342C100 336 200 346 300 340C400 334 500 346 600 340C700 336 760 342 800 340L800 384L0 384Z" fill="url(#gSoil)"/>` +
+      pebbles + `</svg>`;
+
+    const RG = rng(33);
+    let g1 = '', g2 = '', fl = '';
+    for (let x = -4; x < 806; x += 7 + RG() * 4) {
+      const hgt = 7 + RG() * 11, lean = (RG() - 0.5) * 5;
+      const d = `M${r1(x)} 342Q${r1(x + lean * 0.4)} ${r1(342 - hgt * 0.6)} ${r1(x + lean)} ${r1(342 - hgt)}Q${r1(x + lean * 0.9 + 2)} ${r1(342 - hgt * 0.5)} ${r1(x + 3)} 342Z`;
+      if (RG() > 0.5) g1 += d; else g2 += d;
+    }
+    const cols = ['#ffffff', '#ff9eb5', '#ffd166', '#c9b6ff'];
+    for (let i = 0; i < 16; i++) {
+      const x = r1(RG() * 780 + 10), hh = 8 + RG() * 8;
+      fl += `<path d="M${x} 342V${r1(342 - hh)}" stroke="#2f8a4d" stroke-width="1.2"/><circle cx="${x}" cy="${r1(342 - hh)}" r="2.6" fill="${cols[i % 4]}"/><circle cx="${x}" cy="${r1(342 - hh)}" r="1" fill="#f4c430"/>`;
+    }
+    $('#scene-front').innerHTML =
+      `<svg viewBox="0 0 800 384" preserveAspectRatio="xMidYMax slice" class="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">` +
+      `<path d="${g1}" fill="#4aa35f"/><path d="${g2}" fill="#2f8a4d"/>${fl}</svg>`;
+
+    $('#scene-tint').style.background = { night: 'rgba(8,18,40,.38)', eve: 'rgba(255,140,60,.10)', dawn: 'rgba(255,170,120,.08)', day: 'transparent' }[t];
+    this._fx = '';
+  },
+
+  fx(stage) {
+    const key = stage + '|' + this.t;
+    if (this._fx === key) return;
+    this._fx = key;
+    const t = this.t;
+    let h = '';
+    if (stage >= 3 && t !== 'night') {
+      h += [['12%', 0], ['30%', -11]].map(([top, dl]) =>
+        `<div class="bird" style="top:${top};animation-delay:${dl}s"><svg width="28" height="14" viewBox="0 0 28 14"><path class="wing" d="M0 10Q7 -2 14 8Q21 -2 28 10" fill="none" stroke="#2a3b34" stroke-width="2" stroke-linecap="round"/></svg></div>`).join('');
+    }
+    if (stage >= 2 && t !== 'night') {
+      h += `<div class="bfly" style="left:14%;top:54%"><svg width="24" height="20" viewBox="0 0 24 20">` +
+        `<g class="bw"><ellipse cx="7" cy="7" rx="6" ry="5" fill="#f59f00"/><ellipse cx="8" cy="14" rx="4.5" ry="4" fill="#e8590c"/></g>` +
+        `<g class="bw"><ellipse cx="17" cy="7" rx="6" ry="5" fill="#f59f00"/><ellipse cx="16" cy="14" rx="4.5" ry="4" fill="#e8590c"/></g>` +
+        `<rect x="11.2" y="4" width="1.6" height="12" rx=".8" fill="#3a2a1c"/><path d="M12 4q-2-3-4-3M12 4q2-3 4-3" stroke="#3a2a1c" stroke-width=".8" fill="none"/></svg></div>`;
+    }
+    if (t === 'night' && stage >= 1) {
+      const R = rng(55);
+      for (let i = 0; i < 9; i++) {
+        h += `<span class="ff" style="left:${r1(R() * 90 + 5)}%;top:${r1(R() * 40 + 40)}%;animation-delay:${r1(R() * 3)}s;animation-duration:${r1(2.4 + R() * 2)}s"></span>`;
+      }
+    }
+    $('#scene-fx').innerHTML = h;
+  }
+};
+
+const STAGES = [
+  { min: 0,    max: 300 },
+  { min: 301,  max: 800 },
+  { min: 801,  max: 2000 },
+  { min: 2001, max: 4500 },
+  { min: 4501, max: 8000 },
+  { min: 8001, max: Infinity }
+];
+const stageName = (i) => t(`stage.${i}.name`);
+const rangeText = (i) => { const s = STAGES[i]; return (s.max === Infinity ? fmt(s.min) + '+' : fmt(s.min) + '–' + fmt(s.max)) + ' XP'; };
+
+const Plant = {
+  HEIGHTS: [210, 225, 220, 235, 252, 262],
+
+  index(xp) { return STAGES.findIndex(s => xp <= s.max); },
+
+  mini(i, size = 'h-9 w-9') { return `<span class="block ${size} shrink-0">${Art.svg(i, true)}</span>`; },
+
+  buildLadders() {
+    const cur = state.profile ? this.index(state.profile.xp) : -1;
+    $('#plant-ladder').innerHTML = STAGES.map((s, i) =>
+      `<li data-step="${i}" class="flex flex-col items-center gap-1 rounded-xl p-1 ${i <= cur ? '' : 'opacity-40 grayscale'} ${i === cur ? 'now bg-moss-50' : ''}" title="${esc(stageName(i))}: ${fmt(s.min)}+ XP">
+         ${this.mini(i, 'h-11 w-11')}
+         <span class="text-xs text-ink/80">${fmt(s.min)}</span>
+       </li>`).join('');
+    $('#auth-ladder').innerHTML = STAGES.map((s, i) =>
+      `<li class="rise flex items-center gap-3 text-white/90" style="--d:${420 + i * 70}ms">
+         ${this.mini(i, 'h-10 w-10')}
+         <span class="font-bold">${esc(stageName(i))}</span>
+         <span class="ml-auto text-sm text-white/70">${rangeText(i)}</span>
+       </li>`).join('');
+  },
+
+  render(xp) {
+    const i = this.index(xp);
+    const el = $('#plant-art');
+    if (el.dataset.stage !== String(i)) { el.innerHTML = Art.svg(i); el.dataset.stage = String(i); }
+    el.style.height = this.HEIGHTS[i] + 'px';
+    el.style.width = this.HEIGHTS[i] + 'px';
+    el.setAttribute('aria-label', stageName(i));
+    Scene.fx(i);
+
+    $('#plant-name').textContent = stageName(i);
+    $('#plant-desc').textContent = t(`stage.${i}.desc`);
+
+    const s = STAGES[i];
+    let pct = 100, note;
+    if (s.max === Infinity) {
+      note = t('plant.max');
+    } else {
+      pct = Math.min(100, ((xp - s.min) / (s.max - s.min + 1)) * 100);
+      note = t('plant.next', { xp: fmt(s.max + 1 - xp), name: stageName(i + 1) });
+    }
+    $('#xp-fill').dataset.pct = String(pct);
+    $('#xp-fill').style.width = pct + '%';
+    $('#xp-bar').setAttribute('aria-valuenow', String(Math.round(pct)));
+    $('#xp-next').textContent = note;
+    this.buildLadders();
+  },
+
+  popGrow() {
+    const el = $('#plant-art');
+    if (reduceMotion()) return;
+    el.classList.remove('grow'); void el.offsetWidth; el.classList.add('grow');
+  },
+
+  floatXp(amount) {
+    const f = $('#xp-float');
+    f.textContent = `+${amount} XP`;
+    f.classList.remove('run'); void f.offsetWidth; f.classList.add('run');
+  }
+};
+
+const Hero = {
+  i: 0, timer: null,
+  start() {
+    this.show(0);
+    if (reduceMotion()) return;
+    this.timer = setInterval(() => {
+      if (document.hidden || $('#auth-view').classList.contains('hidden')) return;
+      this.show((this.i + 1) % STAGES.length);
+    }, 2800);
+  },
+  show(i) {
+    this.i = i;
+    const el = $('#hero-plant');
+    el.innerHTML = Art.svg(i);
+    if (!reduceMotion()) { el.classList.remove('grow'); void el.offsetWidth; el.classList.add('grow'); }
+    this.refresh();
+  },
+  refresh() { $('#hero-cap').textContent = `${stageName(this.i)} · ${rangeText(this.i)}`; }
+};
+
+let configured = false;
+let sb = null;
+
+const state = {
+  booted: false, uid: null, profile: null, done: new Set(), busy: false, route: 'home', tab: 'day',
+  gain: 0, fromXp: null, levelUp: false
+};
+
+const effectiveStreak = (p) => {
+  const yesterday = dateKey(new Date(Date.now() - 864e5));
+  return p && p.last_active_date && p.last_active_date >= yesterday ? p.streak : 0;
+};
+
+const Periods = {
+  week(k = dateKey()) {
+    const d = new Date(k + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+  },
+  month(k = dateKey()) { return k.slice(0, 8) + '01'; },
+  start(period, k = dateKey()) { return period === 'day' ? k : period === 'week' ? this.week(k) : this.month(k); },
+
+  daysLeft(period, k = dateKey()) {
+    const d = new Date(k + 'T00:00:00Z');
+    if (period === 'week') return 7 - ((d.getUTCDay() + 6) % 7);
+    const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+    return last - d.getUTCDate() + 1;
+  }
+};
+
+const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+
+const Auth = {
+  mode: 'login',
+  checkTimer: null,
+
+  setMode(mode) {
+    this.mode = mode;
+    const signup = mode === 'signup';
+    $('#tab-login').setAttribute('aria-selected', String(!signup));
+    $('#tab-signup').setAttribute('aria-selected', String(signup));
+    $('#tab-login').classList.toggle('bg-white', !signup);
+    $('#tab-signup').classList.toggle('bg-white', signup);
+    $('#wrap-username').classList.toggle('hidden', !signup);
+    $('#password-hint').classList.toggle('hidden', !signup);
+    $('#f-password').autocomplete = signup ? 'new-password' : 'current-password';
+    $('#auth-title').textContent = t(signup ? 'auth.title.signup' : 'auth.title.login');
+    $('#auth-submit').textContent = t(signup ? 'auth.submit.signup' : 'auth.submit.login');
+    this.msg('');
+  },
+
+  msg(text, kind = 'error') {
+    const el = $('#auth-msg');
+    el.textContent = text;
+    el.className = 'min-h-[1.25rem] text-sm ' + (kind === 'ok' ? 'font-bold text-moss-800' : 'font-bold text-red-700');
+  },
+
+  async usernameAvailable(u) {
+    const { data, error } = await sb.rpc('username_available', { p: u });
+    if (error) throw error;
+    return data === true;
+  },
+
+  async validateUsername(raw) {
+    const u = raw.trim().toLowerCase();
+    if (!USERNAME_RE.test(u)) return { ok: false, text: t('f.username.hint') };
+    try {
+      return (await this.usernameAvailable(u))
+        ? { ok: true, text: t('username.free'), u }
+        : { ok: false, text: t('username.taken') };
+    } catch { return { ok: false, text: t('username.checkFail') }; }
+  },
+
+  watchUsername(input, hint) {
+    const base = hint.className.replace(/\s*(font-bold|text-red-700|text-moss-800|text-ink\/70)/g, '');
+    input.addEventListener('input', () => {
+      clearTimeout(this.checkTimer);
+      if (!input.value.trim()) { hint.textContent = t('f.username.hint'); hint.className = base + ' text-ink/70'; return; }
+      this.checkTimer = setTimeout(async () => {
+        const r = await this.validateUsername(input.value);
+        hint.textContent = r.text;
+        hint.className = base + (r.ok ? ' text-moss-800 font-bold' : ' text-red-700 font-bold');
+      }, 400);
+    });
+  },
+
+  errorText(err) {
+    if (err && err.status === 429) return t('err.rate');
+    const m = (err && err.message || '').toLowerCase();
+    if (m.includes('email not confirmed')) return t('err.unconfirmed');
+    return t(this.mode === 'login' ? 'err.login' : 'err.signup');
+  },
+
+  async submit() {
+    const email = $('#f-email').value.trim();
+    const password = $('#f-password').value;
+    if (!/^\S+@\S+\.\S+$/.test(email)) return this.msg(t('err.email'));
+    if (this.mode === 'signup' && password.length < 8) return this.msg(t('err.pass8'));
+    if (!password) return this.msg(t('err.passEmpty'));
+
+    const btn = $('#auth-submit');
+    btn.disabled = true; this.msg('');
+    try {
+      if (this.mode === 'signup') {
+        const v = await this.validateUsername($('#f-username').value);
+        if (!v.ok) { this.msg(v.text); return; }
+        const { data, error } = await sb.auth.signUp({
+          email, password,
+          options: { data: { username: v.u }, emailRedirectTo: location.origin + location.pathname }
+        });
+        if (error) throw error;
+        if (!data.session) this.msg(t('auth.confirmSent'), 'ok');
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.error('auth', err);
+      this.msg(this.errorText(err));
+    } finally { btn.disabled = false; }
+  },
+
+  async google() {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.origin + location.pathname }
+    });
+    if (error) this.msg(t('auth.googleFail'));
+  },
+
+  async signOut() { await sb.auth.signOut(); }
+};
+
+const Profile = {
+  COLS: 'id,username,xp,streak,last_active_date',
+
+  async load() {
+    const { data, error } = await sb.from('profiles').select(this.COLS).eq('id', state.uid).maybeSingle();
+    if (error) {
+      console.error('profiles select', error);
+      Toast.show(t('err.profileLoad', { c: error.code || error.message }), 'error');
+      return null;
+    }
+    if (data) return data;
+
+    const r = await sb.rpc('ensure_profile');
+    if (r.error) {
+      console.error('ensure_profile', r.error);
+      Toast.show(t('err.profileMake', { c: r.error.code || r.error.message }), 'error');
+      return null;
+    }
+    return r.data;
+  },
+
+  apply(p, gained = 0) {
+    const old = state.profile ? state.profile.xp : p.xp;
+    if (gained > 0) {
+      if (state.fromXp == null) state.fromXp = old;
+      state.gain += gained;
+      if (Plant.index(p.xp) > Plant.index(old)) state.levelUp = true;
+    }
+    state.profile = p;
+    const streak = effectiveStreak(p);
+
+    $('#chip-name').textContent = '@' + p.username;
+    $('#chip-streak').innerHTML = `${flame('h-4 w-4')}<span>${streak}</span>`;
+    $('#chip-xp').textContent = `${fmt(p.xp)} XP`;
+    $('#home-title').textContent = `${greeting()}, @${p.username}`;
+    $('#plant-xp').textContent = fmt(p.xp);
+    Plant.render(p.xp);
+
+    $('#stat-streak').textContent = streak;
+    $('#stat-streak-unit').textContent = daysWord(streak);
+    $('#stat-streak-note').textContent =
+      p.last_active_date === dateKey() ? t('streak.kept')
+      : streak > 0 ? t('streak.keep')
+      : t('streak.start');
+  },
+
+  async loadRank() {
+    if (!state.profile) return;
+    const { count, error } = await sb.from('profiles').select('id', { count: 'exact', head: true })
+      .gt('xp', state.profile.xp).not('username', 'is', null);
+    const el = $('#stat-rank');
+    if (error) { el.textContent = '–'; return; }
+    animateNumber(el, 0, (count || 0) + 1, 900);
+  },
+
+  askUsername() {
+    const modal = $('#name-modal');
+    modal.classList.remove('hidden'); modal.classList.add('grid');
+    $('#n-username').focus();
+  },
+
+  async saveUsername() {
+    const hint = $('#n-hint'), btn = $('#n-submit');
+    const v = await Auth.validateUsername($('#n-username').value);
+    if (!v.ok) { hint.textContent = v.text; hint.className = 'mt-1 min-h-[1.25rem] text-sm font-bold text-red-700'; return; }
+    btn.disabled = true;
+    const { error } = await sb.from('profiles').update({ username: v.u }).eq('id', state.uid);
+    btn.disabled = false;
+    if (error) {
+      hint.textContent = t(error.code === '23505' ? 'name.taken' : 'name.fail');
+      hint.className = 'mt-1 min-h-[1.25rem] text-sm font-bold text-red-700';
+      return;
+    }
+    $('#name-modal').classList.add('hidden'); $('#name-modal').classList.remove('grid');
+    await App.enter();
+  }
+};
+
+const Home = {
+  play() {
+    const p = state.profile;
+    if (!p) return;
+    const from = state.gain > 0 && state.fromXp != null ? state.fromXp : 0;
+    animateNumber($('#plant-xp'), from, p.xp, 1200);
+    animateNumber($('#stat-streak'), 0, effectiveStreak(p), 900);
+    const daily = Quests.counts('day');
+    animateNumber($('#stat-today'), 0, daily.done, 900);
+
+    $$('#xp-fill, [data-bar]').forEach(bar => {
+      const pct = bar.dataset.pct || 0;
+      bar.classList.remove('shine');
+      bar.style.width = '0%'; void bar.offsetWidth;
+      requestAnimationFrame(() => { bar.style.width = pct + '%'; bar.classList.add('shine'); });
+    });
+
+    if (state.gain > 0) {
+      const gain = state.gain, lvl = state.levelUp;
+      state.gain = 0; state.fromXp = null; state.levelUp = false;
+      setTimeout(() => {
+        Plant.floatXp(gain);
+        leafBurst($('#plant-scene'), lvl ? 32 : 14);
+        if (lvl) { Plant.popGrow(); Toast.show(t('levelup', { name: stageName(Plant.index(p.xp)) }), 'ok'); }
+      }, 450);
+    }
+  }
+};
+
+const QUESTS = [
+  { key: 'water_tap', period: 'day', xp: 50, icon: 'tap',
+    prompts: ['a photo of a water tap', 'a photo of a person turning off a faucet', 'a photo of a sink with a faucet', 'a photo of someone brushing teeth at a sink'] },
+  { key: 'eco_bag', period: 'day', xp: 50, icon: 'ecobag',
+    prompts: ['a photo of a reusable cloth shopping bag', 'a photo of a canvas tote bag with groceries', 'a photo of a person holding a reusable shopping bag', 'a photo of a shopping bag in a store'] },
+  { key: 'battery', period: 'day', xp: 50, icon: 'battery',
+    prompts: ['a photo of used batteries', 'a photo of a battery recycling box', 'a photo of batteries in a collection bin', 'a photo of a person putting a battery into a recycling container'] },
+  { key: 'sorting', period: 'day', xp: 50, icon: 'bins',
+    prompts: ['a photo of waste sorting bins', 'a photo of recycling bins for paper plastic and glass', 'a photo of sorted trash', 'a photo of plastic bottles and paper separated for recycling'] },
+  { key: 'bottle', period: 'day', xp: 50, icon: 'bottle',
+    prompts: ['a photo of a reusable water bottle', 'a photo of a person filling a bottle with water', 'a photo of a metal water bottle', 'a photo of a water bottle next to a water cooler'] },
+  { key: 'lights', period: 'day', xp: 50, icon: 'bulb',
+    prompts: ['a photo of a light switch', 'a photo of a hand turning off a light', 'a photo of a switched off lamp', 'a photo of a dark room with the light off'] },
+
+  { key: 'w_transport', period: 'week', xp: 150, icon: 'bike',
+    prompts: ['a photo of a bicycle', 'a photo of a person riding a bicycle', 'a photo of a bus stop', 'a photo of a sidewalk with pedestrians'] },
+  { key: 'w_plant', period: 'week', xp: 150, icon: 'sprout',
+    prompts: ['a photo of a potted plant', 'a photo of a person watering a plant', 'a photo of a plant in soil', 'a photo of a garden bed with plants'] },
+  { key: 'w_cleanup', period: 'week', xp: 150, icon: 'trash',
+    prompts: ['a photo of a trash bag full of litter', 'a photo of a person picking up litter', 'a photo of garbage collected in a bag', 'a photo of gloves and a trash bag'] },
+
+  { key: 'm_tree', period: 'month', xp: 400, icon: 'tree',
+    prompts: ['a photo of a young tree sapling planted in soil', 'a photo of a person planting a tree', 'a photo of a small tree with a shovel', 'a photo of a seedling in the ground'] },
+  { key: 'm_secondhand', period: 'month', xp: 400, icon: 'recycle',
+    prompts: ['a photo of a box of donated clothes', 'a photo of a repaired item', 'a photo of old clothes being given away', 'a photo of a person sewing or repairing something'] },
+  { key: 'm_cleanup_big', period: 'month', xp: 400, icon: 'group',
+    prompts: ['a photo of a group of people cleaning a park', 'a photo of volunteers collecting trash', 'a photo of people with garbage bags outdoors', 'a photo of a group of students picking up litter'] }
+];
+
+const OTHER_GROUPS = [
+  { key: 'person', prompts: ['a photo of a person sitting on a chair', 'a selfie of a person', 'a portrait of a face', 'a photo of a person sitting at a desk'] },
+  { key: 'screen', prompts: ['a screenshot of a phone screen', 'a screenshot of a website', 'a photo of a computer monitor'] },
+  { key: 'random', prompts: ['a photo of a landscape', 'a photo of a car', 'a photo of an animal', 'a photo of food on a plate', 'a photo of a building', 'a photo of a room interior', 'a drawing or cartoon', 'a stock photo with a watermark', 'a photo of a text document'] }
+];
+
+class Reject extends Error { constructor(kind, msg, why) { super(msg || kind); this.kind = kind; this.why = why || ''; } }
+
+const Quests = {
+  counts(period) {
+    const list = QUESTS.filter(q => q.period === period);
+    return { done: list.filter(q => state.done.has(q.key)).length, total: list.length };
+  },
+
+  async loadDone() {
+    const today = dateKey();
+    const from = [Periods.week(today), Periods.month(today)].sort()[0];
+    const { data } = await sb.from('quest_logs').select('quest_key,period_start').gte('period_start', from);
+    const done = new Set();
+    (data || []).forEach(r => {
+      const q = QUESTS.find(x => x.key === r.quest_key);
+      if (q && r.period_start === Periods.start(q.period, today)) done.add(q.key);
+    });
+    state.done = done;
+  },
+
+  resetText(period) {
+    if (period === 'day') return t('quests.reset.day');
+    const n = Periods.daysLeft(period);
+    return n === 1 ? t('quests.reset.last') : t('quests.reset.left', { n, days: daysWord(n) });
+  },
+
+  renderMeta() {
+    ['day', 'week', 'month'].forEach(p => {
+      const c = this.counts(p);
+      $('#qcount-' + p).textContent = `${c.done}/${c.total}`;
+      $('#qtab-' + p).setAttribute('aria-selected', String(p === state.tab));
+      $('#qtab-' + p).className = 'qtab';
+    });
+    const xp = QUESTS.find(q => q.period === state.tab).xp;
+    $('#quest-intro').textContent = t('quests.intro.' + state.tab, { xp });
+    $('#quest-reset').textContent = this.resetText(state.tab);
+    $('#quest-list').setAttribute('aria-labelledby', 'qtab-' + state.tab);
+
+    const d = this.counts('day');
+    $('#stat-today').textContent = d.done;
+    $('#stat-total').textContent = d.total;
+
+    [['week', 'wk'], ['month', 'mo']].forEach(([period, id]) => {
+      const c = this.counts(period);
+      $(`#${id}-text`).textContent = t('period.progress', { n: c.done, m: c.total });
+      $(`#${id}-bar`).dataset.pct = String(c.total ? (c.done / c.total) * 100 : 0);
+      $(`#${id}-bar`).style.width = (c.total ? (c.done / c.total) * 100 : 0) + '%';
+      $(`#${id}-left`).textContent = this.resetText(period);
+    });
+  },
+
+  render(instant = false) {
+    const list = QUESTS.filter(q => q.period === state.tab);
+    $('#quest-list').innerHTML = list.map(q => {
+      const done = state.done.has(q.key);
+      const title = t(`q.${q.key}.title`);
+      return `<li data-reveal class="${instant ? 'in ' : ''}card flex flex-col gap-3 p-5 transition-colors hover:border-moss-600 ${done ? 'bg-moss-50' : ''}">
+        <div class="flex items-start gap-3">
+          <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full ${done ? 'bg-moss-700 text-white' : 'bg-moss-100 text-moss-700'}">${icon(done ? 'check' : q.icon, 'h-6 w-6')}</span>
+          <div class="min-w-0 flex-1">
+            <h2 class="text-lg font-bold">${esc(title)}</h2>
+            <p class="mt-1 text-ink/80">${esc(t(`q.${q.key}.hint`))}</p>
+            <p class="mt-1 text-sm text-ink/70">${esc(t('quests.need', { x: t(`q.${q.key}.need`) }))}</p>
+          </div>
+          <span class="shrink-0 rounded-full bg-sun-100 px-3 py-1 text-sm font-bold">+${q.xp} XP</span>
+        </div>
+        ${done
+          ? `<p class="flex items-center gap-2 font-bold text-moss-800">${icon('check', 'h-5 w-5')} ${esc(t('quests.done.' + q.period))}</p>`
+          : `<label class="btn btn-primary cursor-pointer self-start focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-moss-700">
+               ${icon('camera', 'h-5 w-5')} ${esc(t('quests.send'))}
+               <input type="file" accept="image/*" class="sr-only" data-quest="${q.key}" aria-label="${esc(t('quests.send') + ': ' + title)}">
+             </label>`}
+      </li>`;
+    }).join('');
+    this.renderMeta();
+    if (!instant && state.route === 'quests') Reveal.replay($('#quest-list'));
+  },
+
+  setTab(tab) {
+    state.tab = tab;
+    this.render(false);
+  },
+
+  async claim(key, fp) {
+    const { data, error } = await sb.rpc('complete_quest', {
+      p_quest_key: key, p_photo_hash: fp.sha, p_phash: fp.dhash
+    });
+    if (error) {
+      const m = error.message || '';
+      if (m.includes('duplicate_photo')) throw new Reject('fake', null, 'dup');
+      if (m.includes('already_done')) { state.done.add(key); this.render(true); throw new Reject('tech', t('err.already')); }
+      console.error('complete_quest', error);
+      throw new Reject('tech', t('err.server'));
+    }
+    return data;
+  },
+
+  async submit(key, file) {
+    if (state.busy) return;
+    state.busy = true;
+    const quest = QUESTS.find(q => q.key === key);
+    Scan.open();
+    const ctx = {};
+    try {
+      await Scan.step(t('scan.format'), async () => { ctx.bmp = await AntiCheat.validateFormat(file); });
+      await Scan.step(t('scan.meta'), async () => { await AntiCheat.checkOrigin(file, quest.period); });
+      await Scan.step(t('scan.print'), async () => { ctx.fp = await AntiCheat.fingerprint(file, ctx.bmp); });
+
+      await Scan.step(t('scan.model'), async (setLabel) => {
+        Vision.listen((pct) => setLabel(t('scan.modelPct', { pct })));
+        try { ctx.clf = await Vision.load(); } finally { Vision.listen(null); }
+      }, 300);
+
+      await Scan.step(t('scan.content', { x: t(`q.${key}.seen`) }), async () => {
+        const v = await Vision.judge(ctx.clf, file, quest);
+        if (!v.ok) throw new Reject('mismatch', t('scan.mismatch', { seen: v.seen, need: t(`q.${key}.need`) }));
+      });
+
+      await Scan.step(t('scan.dupes'), async () => { ctx.profile = await this.claim(key, ctx.fp); });
+
+      state.done.add(key);
+      Scan.finish(true, t('scan.ok', { xp: quest.xp }));
+      Profile.apply(ctx.profile, quest.xp);
+      this.render(true);
+    } catch (e) {
+      let msg, detail = '';
+      if (e instanceof Reject) {
+        if (e.kind === 'fake') { msg = t('scan.fake'); if (e.why) detail = t('scan.why.' + e.why); }
+        else msg = e.message;
+      } else { console.error(e); msg = t('scan.unexpected'); }
+      Scan.finish(false, msg, detail);
+    } finally {
+      if (ctx.bmp && ctx.bmp.close) ctx.bmp.close();
+      state.busy = false;
+    }
+  }
+};
+
+const Exif = {
+  async read(file) {
+    const buf = await file.slice(0, 262144).arrayBuffer();
+    const v = new DataView(buf);
+    if (v.byteLength < 12 || v.getUint16(0) !== 0xFFD8) return null;
+    let p = 2;
+    while (p + 4 < v.byteLength) {
+      if (v.getUint8(p) !== 0xFF) return null;
+      const marker = v.getUint8(p + 1);
+      if (marker === 0xDA || marker === 0xD9) return null;
+      const len = v.getUint16(p + 2);
+      if (marker === 0xE1 && p + 10 < v.byteLength && v.getUint32(p + 4) === 0x45786966 && v.getUint16(p + 8) === 0) {
+        return this.parse(v, p + 10);
+      }
+      p += 2 + len;
+    }
+    return null;
+  },
+
+  parse(v, base) {
+    const head = v.getUint16(base);
+    const le = head === 0x4949;
+    if (!le && head !== 0x4D4D) return null;
+    const room = v.byteLength - base;
+    const u16 = (o) => v.getUint16(base + o, le);
+    const u32 = (o) => v.getUint32(base + o, le);
+    if (u16(2) !== 42) return null;
+
+    const text = (o, n) => {
+      let out = '';
+      for (let i = 0; i < n && o + i < room; i++) {
+        const c = v.getUint8(base + o + i);
+        if (!c) break;
+        out += String.fromCharCode(c);
+      }
+      return out.trim();
+    };
+
+    const ifd = (off, wanted) => {
+      const out = {};
+      if (off < 8 || off + 2 > room) return out;
+      const n = u16(off);
+      for (let i = 0; i < n; i++) {
+        const e = off + 2 + i * 12;
+        if (e + 12 > room) break;
+        const tag = u16(e);
+        if (!wanted.includes(tag)) continue;
+        const type = u16(e + 2), count = u32(e + 4);
+        if (type === 2) out[tag] = text(count > 4 ? u32(e + 8) : e + 8, count);
+        else if (type === 4) out[tag] = u32(e + 8);
+      }
+      return out;
+    };
+
+    const main = ifd(u32(4), [0x010F, 0x0110, 0x0131, 0x0132, 0x8769]);
+    const sub = main[0x8769] ? ifd(main[0x8769], [0x9003, 0x9004]) : {};
+    return {
+      make: main[0x010F] || '',
+      model: main[0x0110] || '',
+      software: main[0x0131] || '',
+      taken: this.date(sub[0x9003] || sub[0x9004] || main[0x0132] || '')
+    };
+  },
+
+  date(s) {
+    const m = /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/.exec(s);
+    if (!m || Number(m[1]) < 1995) return 0;
+    const ms = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
+    return Number.isFinite(ms) ? ms : 0;
+  }
+};
+
+const AntiCheat = {
+  MAX_BYTES: 12 * 1024 * 1024,
+  MIN_SIDE: 300,
+  MAX_AGE: { day: 36 * 3600e3, week: 8 * 864e5, month: 32 * 864e5 },
+  MAX_AHEAD: 15 * 3600e3,
+  SUSPICIOUS_NAME: /(google|stock|shutterstock|unsplash|pexels|pixabay|pinterest|freepik|istock|getty|depositphotos|wallpaper|download|screenshot|screen[ _-]?shot|скачан|скриншот)/i,
+  EDITORS: /(photoshop|gimp|canva|picsart|pixlr|paint\.net)/i,
+
+  async validateFormat(file) {
+    if (!file.type.startsWith('image/')) throw new Reject('tech', t('err.notImage'));
+    if (file.size > this.MAX_BYTES) throw new Reject('tech', t('err.tooBig'));
+    let bmp;
+    try { bmp = await createImageBitmap(file); }
+    catch { throw new Reject('tech', t('err.unreadable')); }
+    if (Math.min(bmp.width, bmp.height) < this.MIN_SIDE) { bmp.close(); throw new Reject('fake', null, 'small'); }
+    return bmp;
+  },
+
+  async checkOrigin(file, period) {
+    if (this.SUSPICIOUS_NAME.test(file.name)) throw new Reject('fake', null, 'name');
+    let ex = null;
+    try { ex = await Exif.read(file); } catch { ex = null; }
+    if (!ex || (!ex.make && !ex.model)) throw new Reject('fake', null, 'noExif');
+    if (this.EDITORS.test(ex.software)) throw new Reject('fake', null, 'edited');
+    if (!ex.taken) throw new Reject('fake', null, 'noDate');
+    const age = Date.now() - ex.taken;
+    if (age > this.MAX_AGE[period]) throw new Reject('fake', null, 'old');
+    if (age < -this.MAX_AHEAD) throw new Reject('fake', null, 'future');
+  },
+
+  async fingerprint(file, bmp) {
+    if (!(window.crypto && crypto.subtle)) throw new Reject('tech', t('err.https'));
+    const buf = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buf);
+    const sha = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const c = document.createElement('canvas'); c.width = 9; c.height = 8;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, 9, 8);
+    const px = ctx.getImageData(0, 0, 9, 8).data;
+    const gray = (i) => 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+    let dhash = '';
+    for (let y = 0; y < 8; y++)
+      for (let x = 0; x < 8; x++)
+        dhash += gray((y * 9 + x) * 4) > gray((y * 9 + x + 1) * 4) ? '1' : '0';
+    return { sha, dhash };
+  }
+};
+
+const SCORING = {
+  MIN_SCORE: 0.35,
+
+  groups(questKey) {
+    const me = QUESTS.find(q => q.key === questKey);
+    const sibs = QUESTS.filter(q => q.period === me.period).map(q => ({ key: q.key, seenKey: `q.${q.key}.seen`, prompts: q.prompts }));
+    return [...sibs, ...OTHER_GROUPS.map(g => ({ key: g.key, seenKey: `seen.${g.key}`, prompts: g.prompts }))];
+  },
+
+  judge(out, questKey) {
+    const groups = this.groups(questKey);
+    const owner = new Map();
+    groups.forEach(g => g.prompts.forEach(p => owner.set(p, g.key)));
+    const sums = Object.fromEntries(groups.map(g => [g.key, 0]));
+    for (const o of out) {
+      let k = owner.get(o.label);
+      if (!k) for (const [p, gk] of owner) if (o.label.includes(p)) { k = gk; break; }
+      if (k) sums[k] += o.score;
+    }
+    const ranked = Object.entries(sums).sort((a, b) => b[1] - a[1]);
+    const [topKey, topScore] = ranked[0];
+    const g = groups.find(x => x.key === topKey);
+    return {
+      ok: topKey === questKey && topScore >= this.MIN_SCORE,
+      top: topKey, topScore, seen: g ? t(g.seenKey) : '',
+      table: ranked.map(([k, s]) => ({ топ: k, ұпай: Math.round(s * 1000) / 1000 }))
+    };
+  }
+};
+
+const Vision = {
+  VERSION: '2.17.2',
+  MODEL: 'Xenova/clip-vit-base-patch32',
+  promise: null,
+  files: {},
+  listener: null,
+
+  listen(fn) { this.listener = fn; },
+
+  load() {
+    if (this.promise) return this.promise;
+    this.promise = (async () => {
+      let tf;
+      try { tf = await import(`https://cdn.jsdelivr.net/npm/@xenova/transformers@${this.VERSION}`); }
+      catch { throw new Reject('tech', t('err.aiLib')); }
+      tf.env.allowLocalModels = false;
+      try {
+        return await tf.pipeline('zero-shot-image-classification', this.MODEL, {
+          progress_callback: (p) => this.onProgress(p)
+        });
+      } catch (e) {
+        console.error('CLIP load', e);
+        throw new Reject('tech', t('err.aiModel'));
+      }
+    })().catch(e => { this.promise = null; throw e; });
+    return this.promise;
+  },
+
+  onProgress(p) {
+    if (p.status !== 'progress' || !p.total) return;
+    this.files[p.file] = { l: p.loaded, t: p.total };
+    const v = Object.values(this.files);
+    const pct = Math.round(v.reduce((a, x) => a + x.l, 0) / v.reduce((a, x) => a + x.t, 0) * 100);
+    if (this.listener) this.listener(pct);
+  },
+
+  warm() {
+    const c = navigator.connection;
+    if (c && (c.saveData || c.type === 'cellular')) return;
+    this.load().catch(() => {});
+  },
+
+  async judge(clf, file, quest) {
+    const groups = SCORING.groups(quest.key);
+    const labels = groups.flatMap(g => g.prompts);
+    const url = URL.createObjectURL(file);
+    let out;
+    try { out = await clf(url, labels, { hypothesis_template: '{}' }); }
+    catch (e) { console.error('CLIP run', e); throw new Reject('tech', t('err.aiRun')); }
+    finally { URL.revokeObjectURL(url); }
+    const v = SCORING.judge(out, quest.key);
+    console.log(`AI Agent: «${quest.key}» → ${v.ok ? 'OK' : 'REJECT'}`);
+    console.table(v.table);
+    return v;
+  }
+};
+
+const Scan = {
+  opener: null,
+
+  open() {
+    this.opener = document.activeElement;
+    $('#scan-steps').innerHTML = '';
+    const r = $('#scan-result'); r.className = 'mt-5 hidden rounded-lg p-3 font-bold'; r.innerHTML = '';
+    $('#scan-close').classList.add('hidden');
+    $('#scan-go').classList.add('hidden');
+    const m = $('#scan-modal'); m.classList.remove('hidden'); m.classList.add('grid');
+    $('#scan-box').focus();
+  },
+
+  async step(label, fn, minMs = 650) {
+    const li = document.createElement('li');
+    li.className = 'rise flex items-center gap-3';
+    li.innerHTML = `<span class="spinner shrink-0" aria-hidden="true"></span><span></span>`;
+    const text = li.lastElementChild;
+    text.textContent = label;
+    $('#scan-steps').appendChild(li);
+    let failure = null;
+    await Promise.all([fn((s) => { text.textContent = s; }).catch(e => { failure = e; }), sleep(minMs)]);
+    const mark = li.firstElementChild;
+    if (failure) {
+      mark.outerHTML = `<span class="shrink-0 font-bold text-red-700" aria-hidden="true">✕</span>`;
+      throw failure;
+    }
+    mark.outerHTML = `<span class="shrink-0 text-moss-700">${icon('check', 'h-5 w-5')}</span>`;
+  },
+
+  finish(ok, text, detail = '') {
+    const r = $('#scan-result');
+    r.className = 'mt-5 flex items-start gap-3 rounded-lg p-3 font-bold ' + (ok ? 'bg-moss-100 text-moss-900' : 'bg-red-50 text-red-800');
+    r.innerHTML = '';
+    if (ok) {
+      r.insertAdjacentHTML('beforeend', `<svg class="h-7 w-7 shrink-0 text-moss-700" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="draw-circle" cx="14" cy="14" r="12"/><path class="draw-check" d="m8.5 14.5 4 4 7-8"/></svg>`);
+    }
+    const box = document.createElement('div');
+    const span = document.createElement('span');
+    span.textContent = text;
+    box.appendChild(span);
+    if (detail) {
+      const d = document.createElement('p');
+      d.className = 'mt-1 text-sm font-normal';
+      d.textContent = detail;
+      box.appendChild(d);
+    }
+    r.appendChild(box);
+    $('#scan-go').classList.toggle('hidden', !ok);
+    const b = $('#scan-close'); b.classList.remove('hidden');
+    (ok ? $('#scan-go') : b).focus();
+    if (ok) leafBurst($('#scan-box'), 18, { left: '50%', top: '38%' });
+  },
+
+  close() {
+    const m = $('#scan-modal'); m.classList.add('hidden'); m.classList.remove('grid');
+    if (this.opener && this.opener.focus) this.opener.focus();
+  }
+};
+
+const Leaderboard = {
+  async load() {
+    const body = $('#lb-body'), foot = $('#lb-foot'), podium = $('#lb-podium');
+    body.innerHTML = `<tr><td colspan="5" class="px-3 py-6 text-ink/80">${esc(t('lb.loading'))}</td></tr>`;
+    foot.innerHTML = ''; podium.innerHTML = '';
+
+    const { data, error } = await sb.from('profiles')
+      .select('id,username,xp,streak,last_active_date')
+      .not('username', 'is', null)
+      .order('xp', { ascending: false }).order('username')
+      .limit(50);
+
+    if (error) { body.innerHTML = `<tr><td colspan="5" class="px-3 py-6 text-red-700">${esc(t('lb.error'))}</td></tr>`; return; }
+    if (!data.length) { body.innerHTML = `<tr><td colspan="5" class="px-3 py-6 text-ink/80">${esc(t('lb.empty'))}</td></tr>`; return; }
+
+    const order = ['sm:order-2', 'sm:order-1', 'sm:order-3'];
+    podium.innerHTML = data.slice(0, 3).map((p, i) => {
+      const me = p.id === state.uid;
+      return `<li class="lb-row flex flex-col items-center rounded-xl border p-4 text-center ${order[i]} ${i === 0 ? 'border-sun-400 bg-sun-100 sm:pb-8' : 'border-moss-200 bg-white'} ${me ? 'ring-2 ring-moss-700' : ''}" style="--i:${i}">
+        <span class="text-sm font-bold text-ink/70">#${i + 1}</span>
+        ${Plant.mini(Plant.index(p.xp), 'h-20 w-20')}
+        <span class="mt-1 max-w-full truncate font-bold">@${esc(p.username)}</span>
+        <span class="text-moss-700 font-bold"><span data-count="${p.xp}">${fmt(p.xp)}</span> XP</span>
+      </li>`;
+    }).join('');
+
+    const row = (p, rank, i) => {
+      const me = p.id === state.uid;
+      const idx = Plant.index(p.xp);
+      return `<tr class="lb-row border-t border-moss-100 ${me ? 'bg-sun-100 font-bold' : ''}" style="--i:${i}"${me ? ' aria-current="true"' : ''}>
+        <td class="px-3 py-3">${rank}</td>
+        <td class="max-w-[9rem] truncate px-3 py-3">@${esc(p.username)}${me ? ` <span class="text-sm font-normal">${esc(t('lb.you'))}</span>` : ''}</td>
+        <td class="whitespace-nowrap px-3 py-3"><span class="inline-flex items-center gap-1">${flame('h-4 w-4')}${effectiveStreak(p)}</span></td>
+        <td class="whitespace-nowrap px-3 py-3 text-right"><span data-count="${p.xp}">${fmt(p.xp)}</span></td>
+        <td class="whitespace-nowrap px-3 py-3"><span class="inline-flex items-center gap-2">${Plant.mini(idx, 'h-8 w-8')}<span class="hidden sm:inline">${esc(stageName(idx))}</span></span></td>
+      </tr>`;
+    };
+
+    body.innerHTML = data.map((p, i) => row(p, i + 1, i)).join('');
+
+    if (!data.some(p => p.id === state.uid) && state.profile) {
+      const { count } = await sb.from('profiles').select('id', { count: 'exact', head: true })
+        .gt('xp', state.profile.xp).not('username', 'is', null);
+      foot.innerHTML = `<tr><td colspan="5" class="border-t border-moss-200 bg-moss-50 px-3 py-1 text-center text-sm text-ink/70">…</td></tr>` +
+        row(state.profile, (count || 0) + 1, data.length);
+    }
+
+    $$('[data-count]', $('#route-leaderboard')).forEach(el => animateNumber(el, 0, Number(el.dataset.count), 1000));
+  }
+};
+
+const ROUTES = [
+  { id: 'home',        icon: 'home' },
+  { id: 'quests',      icon: 'quests' },
+  { id: 'leaderboard', icon: 'trophy' },
+  { id: 'store',       icon: 'gift' }
+];
+
+const Router = {
+  build() {
+    $('#nav-desktop').innerHTML = ROUTES.map(r =>
+      `<a href="#/${r.id}" data-route="${r.id}" class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 font-bold hover:bg-moss-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700 aria-[current=page]:bg-moss-100 aria-[current=page]:text-moss-800">${icon(r.icon)}${esc(t('nav.' + r.id))}</a>`).join('');
+    $('#nav-mobile').innerHTML = ROUTES.map(r =>
+      `<a href="#/${r.id}" data-route="${r.id}" class="flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-bold text-ink/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-moss-700 aria-[current=page]:bg-moss-100 aria-[current=page]:text-moss-800">${icon(r.icon)}${esc(t('nav.' + r.id))}</a>`).join('');
+    this.mark();
+  },
+
+  mark() {
+    $$('[data-route]').forEach(a => a.dataset.route === state.route ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  },
+
+  current() {
+    const id = (location.hash.match(/^#\/(\w+)/) || [])[1];
+    return ROUTES.some(r => r.id === id) ? id : 'home';
+  },
+
+  async go(first = false) {
+    if (!state.profile || !state.profile.username) return;
+    const id = this.current();
+    state.route = id;
+    ROUTES.forEach(r => $('#route-' + r.id).classList.toggle('hidden', r.id !== id));
+    this.mark();
+
+    const section = $('#route-' + id);
+    if (id === 'quests') Quests.render(true);
+    Reveal.replay(section);
+    if (id === 'home') { Quests.renderMeta(); Home.play(); Profile.loadRank(); }
+    if (id === 'leaderboard') Leaderboard.load();
+    if (id === 'quests') Vision.warm();
+
+    if (!first) { window.scrollTo({ top: 0 }); const h = $('h1', section); if (h) h.focus({ preventScroll: true }); }
+
+    if (id === 'quests' || id === 'home') {
+      const before = [...state.done].sort().join();
+      await Quests.loadDone();
+      if ([...state.done].sort().join() !== before) { Quests.render(true); }
+    }
+  }
+};
+
+const App = {
+  show(view) {
+    $('#boot').classList.add('hidden');
+    $('#auth-view').classList.toggle('hidden', view !== 'auth');
+    $('#app-view').classList.toggle('hidden', view !== 'app');
+  },
+
+  async onSession(session) {
+    const uid = session && session.user ? session.user.id : null;
+    if (state.booted && uid === state.uid) return;
+    state.booted = true; state.uid = uid;
+
+    if (!uid) { state.profile = null; this.show('auth'); return; }
+
+    const p = await Profile.load();
+    if (!p) { state.booted = false; state.uid = null; this.show('auth'); return; }
+    state.profile = p;
+    if (!p.username) { this.show('app'); Profile.askUsername(); return; }
+    await this.enter();
+  },
+
+  async enter() {
+    if (!state.profile.username) state.profile = await Profile.load();
+    await Quests.loadDone();
+    Quests.render(true);
+    Profile.apply(state.profile);
+    this.show('app');
+    if (!location.hash.startsWith('#/')) location.hash = '#/home';
+    Router.go(true);
+  },
+
+  relang() {
+    I18n.apply();
+    Auth.setMode(Auth.mode);
+    Router.build();
+    Hero.refresh();
+    Plant.buildLadders();
+    if (state.profile && state.profile.username) {
+      Profile.apply(state.profile);
+      Quests.render(true);
+      if (state.route === 'leaderboard') Leaderboard.load();
+    }
+  },
+
+  bind() {
+    $('#tab-login').addEventListener('click', () => Auth.setMode('login'));
+    $('#tab-signup').addEventListener('click', () => Auth.setMode('signup'));
+    $('#auth-form').addEventListener('submit', (e) => { e.preventDefault(); Auth.submit(); });
+    $('#btn-google').addEventListener('click', () => Auth.google());
+    $('#btn-logout').addEventListener('click', () => Auth.signOut());
+    Auth.watchUsername($('#f-username'), $('#username-hint'));
+    Auth.watchUsername($('#n-username'), $('#n-hint'));
+    $('#name-form').addEventListener('submit', (e) => { e.preventDefault(); Profile.saveUsername(); });
+
+    $$('[data-lang]').forEach(b => b.addEventListener('click', () => I18n.set(b.dataset.lang)));
+
+    $('#quest-tabs').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-tab]');
+      if (b) Quests.setTab(b.dataset.tab);
+    });
+
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-go-tab]');
+      if (a) state.tab = a.dataset.goTab;
+    });
+
+    $('#quest-list').addEventListener('change', (e) => {
+      const input = e.target.closest('input[type=file][data-quest]');
+      if (!input || !input.files[0]) return;
+      const file = input.files[0];
+      input.value = '';
+      Quests.submit(input.dataset.quest, file);
+    });
+
+    $('#scan-close').addEventListener('click', () => Scan.close());
+    $('#scan-go').addEventListener('click', () => { Scan.close(); if (location.hash === '#/home') Router.go(); else location.hash = '#/home'; });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !$('#scan-close').classList.contains('hidden') && !$('#scan-modal').classList.contains('hidden')) Scan.close();
+    });
+    window.addEventListener('hashchange', () => Router.go());
+    window.addEventListener('scroll', () => $('#app-header').classList.toggle('scrolled', window.scrollY > 4), { passive: true });
+  },
+
+  async init() {
+    I18n.init();
+    hydrateIcons();
+    I18n.apply();
+    Scene.build();
+    Plant.buildLadders();
+    Router.build();
+    Reveal.init();
+    this.bind();
+    Auth.setMode('login');
+    Hero.start();
+
+    await loadConfig();
+    configured =
+      CONFIG.SUPABASE_URL.startsWith('https://') && !CONFIG.SUPABASE_URL.includes('YOUR_') &&
+      CONFIG.SUPABASE_ANON_KEY.length > 20 && !CONFIG.SUPABASE_ANON_KEY.includes('YOUR_');
+
+    if (!configured) {
+      $('#boot').classList.add('hidden');
+      const w = $('#config-warning'); w.classList.remove('hidden'); w.classList.add('grid');
+      return;
+    }
+
+    sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' }
+    });
+
+    sb.auth.onAuthStateChange((_event, session) => { setTimeout(() => this.onSession(session), 0); });
+    const { data } = await sb.auth.getSession();
+    await this.onSession(data.session);
+
+    if (location.search.includes('code=')) history.replaceState({}, '', location.pathname + location.hash);
+  }
+};
+
+App.init();
+</script>
+</body>
+</html>
