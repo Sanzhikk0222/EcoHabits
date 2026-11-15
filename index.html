@@ -35,9 +35,9 @@
 </style>
 <style>
   html { scroll-behavior: smooth; }
-  #auth-view.hidden { display: none !important; } /* lg:grid кең экранда hidden-ді жеңіп кетпеуі үшін */
+  #auth-view.hidden { display: none !important; }
 
-  /* өсімдік */
+ 
   .plant { line-height: 1; transform-origin: 50% 100%; animation: sway 5s ease-in-out infinite; transition: font-size .6s cubic-bezier(.2,.8,.2,1); }
   .plant.grow { animation: grow .9s cubic-bezier(.2,.8,.2,1), sway 5s ease-in-out .9s infinite; }
   @keyframes sway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
@@ -49,7 +49,7 @@
   .cloud::before { content: ""; position: absolute; left: 18%; top: -12px; width: 40%; height: 26px; border-radius: 999px; background: inherit; }
   @keyframes drift { from { transform: translateX(-30px); } to { transform: translateX(60px); } }
 
-  /* пайда болу анимациялары */
+
   .js [data-reveal] { opacity: 0; transform: translateY(18px); transition: opacity .6s ease-out var(--d, 0ms), transform .7s cubic-bezier(.2,.8,.2,1) var(--d, 0ms); }
   .js [data-reveal].in { opacity: 1; transform: none; }
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -71,7 +71,7 @@
 <body class="bg-moss-50 font-sans text-ink antialiased">
 <a href="#main" class="sr-only rounded bg-white px-3 py-2 focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50">Мазмұнға өту</a>
 
-<!-- Supabase бапталмаған -->
+
 <div id="config-warning" class="hidden min-h-screen place-items-center p-6">
   <div class="card max-w-lg p-6">
     <h1 class="text-xl font-bold">Supabase әлі қосылмаған</h1>
@@ -83,7 +83,7 @@
   <div class="flex items-center gap-3 text-ink/80"><span class="spinner" aria-hidden="true"></span> Жүктелуде…</div>
 </div>
 
-<!-- ============ КІРУ / ТІРКЕЛУ ============ -->
+
 <section id="auth-view" class="hidden min-h-screen lg:grid lg:grid-cols-2" aria-label="Кіру және тіркелу">
   <div class="bg-moss-900 p-8 text-white lg:p-14">
     <div class="rise flex items-center gap-2 text-xl font-bold"><span data-icon="leaf" data-class="h-7 w-7 text-sun-400"></span> EcoHabits</div>
@@ -130,7 +130,7 @@
   </div>
 </section>
 
-<!-- ============ ҚОСЫМША ============ -->
+
 <div id="app-view" class="hidden">
   <header class="sticky top-0 z-30 border-b border-moss-200 bg-white">
     <div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-2">
@@ -148,7 +148,7 @@
 
   <main id="main" class="mx-auto max-w-6xl px-4 pb-28 pt-6 md:pb-10">
 
-    <!-- Басты бет -->
+ 
     <section id="route-home" class="hidden space-y-6">
       <h1 id="home-title" tabindex="-1" data-reveal class="text-2xl font-bold outline-none"></h1>
       <div class="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -199,7 +199,7 @@
       </div>
     </section>
 
-    <!-- Тапсырмалар -->
+
     <section id="route-quests" class="hidden space-y-5">
       <div data-reveal>
         <h1 tabindex="-1" class="text-2xl font-bold outline-none">Бүгін не істейсің?</h1>
@@ -213,7 +213,7 @@
       <ul id="quest-list" class="grid gap-4 md:grid-cols-2"></ul>
     </section>
 
-    <!-- Рейтинг -->
+  
     <section id="route-leaderboard" class="hidden space-y-5">
       <div data-reveal>
         <h1 tabindex="-1" class="text-2xl font-bold outline-none">Кім алда?</h1>
@@ -237,7 +237,7 @@
       </div>
     </section>
 
-    <!-- Марапаттар -->
+
     <section id="route-store" class="hidden space-y-5">
       <div data-reveal>
         <h1 tabindex="-1" class="text-2xl font-bold outline-none">Марапаттар дүкені</h1>
@@ -270,7 +270,7 @@
   <nav id="nav-mobile" class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-moss-200 bg-white md:hidden" aria-label="Төменгі мәзір"></nav>
 </div>
 
-<!-- Ник таңдау (Google-мен кіргендерге) -->
+
 <div id="name-modal" class="fixed inset-0 z-50 hidden place-items-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="name-title">
   <form id="name-form" class="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" novalidate>
     <h2 id="name-title" class="text-xl font-bold">Өзіңе ник ойлап тап</h2>
@@ -282,7 +282,7 @@
   </form>
 </div>
 
-<!-- AI Agent сканері -->
+
 <div id="scan-modal" class="fixed inset-0 z-50 hidden place-items-center bg-ink/60 p-4" role="dialog" aria-modal="true" aria-labelledby="scan-title">
   <div id="scan-box" tabindex="-1" class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl outline-none">
     <h2 id="scan-title" class="text-xl font-bold">AI Agent Scanning…</h2>
@@ -299,28 +299,21 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script type="module">
-/* =====================================================================
-   EcoHabits: SPA
-   Модульдер: Config · Utils · Icons · Toast · Reveal · Plant · Auth ·
-              Profile · Home · Quests · AntiCheat · Vision · Scan ·
-              Leaderboard · Router · App
-   ===================================================================== */
 
-/* ---------- Config (Supabase деректері config.js файлында) ---------- */
 let FILE_CONFIG = {};
 try { ({ CONFIG: FILE_CONFIG } = await import('./config.js')); }
 catch (e) { console.warn('config.js табылмады', e); }
 
 const CONFIG = {
-  XP_PER_QUEST: 50,      // supabase_schema.sql ішіндегі мәнмен бірдей болуы керек
-  TZ: 'Asia/Almaty',     // «күн» осы уақыт белдеуімен есептеледі
+  XP_PER_QUEST: 50,      
+  TZ: 'Asia/Almaty',     
   ...FILE_CONFIG
 };
-// URL соңына кездейсоқ қойылған /rest/v1 не / алынып тасталады
+
 CONFIG.SUPABASE_URL = String(CONFIG.SUPABASE_URL || '').trim().replace(/\/(rest|auth)\/v1\/?$/, '').replace(/\/+$/, '');
 CONFIG.SUPABASE_ANON_KEY = String(CONFIG.SUPABASE_ANON_KEY || '').trim();
 
-/* ---------- Utils ---------- */
+
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
@@ -337,7 +330,7 @@ function greeting() {
   return h < 5 ? 'Түнде ояу екенсің' : h < 12 ? 'Қайырлы таң' : h < 18 ? 'Қайырлы күн' : 'Қайырлы кеш';
 }
 
-/** Санды from-нан to-ға дейін санап көрсетеді. Екінші шақыру біріншісін тоқтатады. */
+
 function animateNumber(el, from, to, ms = 900) {
   const id = el._an = (el._an || 0) + 1;
   if (reduceMotion() || from === to) { el.textContent = fmt(to); return; }
@@ -351,7 +344,7 @@ function animateNumber(el, from, to, ms = 900) {
   requestAnimationFrame(tick);
 }
 
-/* ---------- Icons ---------- */
+
 const ICONS = {
   leaf:   '<path d="M11 20A7 7 0 0 1 4 13c0-6 6-9 16-10 0 10-3 17-9 17z"/><path d="M4 21c3-6 6-9 11-12"/>',
   home:   '<path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
@@ -369,7 +362,7 @@ const icon = (name, cls = 'h-5 w-5') =>
 const hydrateIcons = (root = document) =>
   $$('[data-icon]', root).forEach(el => { el.innerHTML = icon(el.dataset.icon, el.dataset.class); el.removeAttribute('data-icon'); });
 
-/* ---------- Toast ---------- */
+
 const Toast = {
   show(text, kind = 'info') {
     const el = document.createElement('div');
@@ -381,7 +374,7 @@ const Toast = {
   }
 };
 
-/* ---------- Reveal: айналдырғанда элементтер біртіндеп шығады ---------- */
+
 const Reveal = {
   io: null,
   init() {
@@ -390,7 +383,7 @@ const Reveal = {
       entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); this.io.unobserve(e.target); } });
     }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
   },
-  /** Бөлім ашылған сайын анимацияны басынан қайталайды */
+
   replay(section) {
     const els = $$('[data-reveal]', section);
     els.forEach((el, i) => {
@@ -404,7 +397,7 @@ const Reveal = {
   }
 };
 
-/* ---------- Жапырақ шашырауы (XP алғанда) ---------- */
+
 function leafBurst(scene, n = 14) {
   if (reduceMotion() || !scene.animate) return;
   for (let i = 0; i < n; i++) {
@@ -425,7 +418,7 @@ function leafBurst(scene, n = 14) {
   }
 }
 
-/* ---------- Plant (өсу жүйесі) ---------- */
+
 const STAGES = [
   { min: 0,    max: 300,      glyph: '🫘',     size: '4rem',   name: 'Дән',             desc: 'Әзірге топырақ астында жатыр. Бір тапсырма орындасаң, оянады.' },
   { min: 301,  max: 800,      glyph: '🌱',     size: '5rem',   name: 'Үрпек өскіні',    desc: 'Өскін топырақтан басын көтерді. Серияны үзбей жүре бер.' },
@@ -494,16 +487,16 @@ const Plant = {
   }
 };
 
-/* ---------- Supabase клиенті ---------- */
+
 const configured =
   CONFIG.SUPABASE_URL.startsWith('https://') && !CONFIG.SUPABASE_URL.includes('YOUR_') &&
   CONFIG.SUPABASE_ANON_KEY.length > 20 && !CONFIG.SUPABASE_ANON_KEY.includes('YOUR_');
 let sb = null;
 
-/* ---------- Қолданба күйі ---------- */
+
 const state = {
   booted: false, uid: null, profile: null, done: new Set(), busy: false, route: 'home',
-  gain: 0, fromXp: null, levelUp: false   // сыйлық анимациясы үшін: басты бет ашылғанда ойнатылады
+  gain: 0, fromXp: null, levelUp: false  
 };
 
 const effectiveStreak = (p) => {
@@ -511,7 +504,7 @@ const effectiveStreak = (p) => {
   return p && p.last_active_date && p.last_active_date >= yesterday ? p.streak : 0;
 };
 
-/* ---------- Auth ---------- */
+
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
 
 const Auth = {
@@ -617,7 +610,7 @@ const Auth = {
   async signOut() { await sb.auth.signOut(); }
 };
 
-/* ---------- Profile ---------- */
+
 const Profile = {
   COLS: 'id,username,xp,streak,last_active_date',
 
@@ -629,7 +622,7 @@ const Profile = {
       return null;
     }
     if (data) return data;
-    // профиль жоқ (мысалы, схемаға дейін тіркелген): сервер жағында жасаймыз
+    
     const r = await sb.rpc('ensure_profile');
     if (r.error) {
       console.error('ensure_profile', r.error);
@@ -695,7 +688,7 @@ const Profile = {
   }
 };
 
-/* ---------- Home: басты бет ашылғанда сандар мен өсімдік жанданады ---------- */
+
 const Home = {
   play() {
     const p = state.profile;
@@ -721,9 +714,7 @@ const Home = {
   }
 };
 
-/* ---------- Quests ---------- */
-/* prompts: суреттің мазмұнын тексеретін CLIP үшін сипаттамалар (ағылшынша жақсы істейді).
-   need: адамға көрсетілетін «кадрда не болу керек». seen: AI мұны көрсе, не деп айтады. */
+
 const QUESTS = [
   { key: 'water_tap', title: 'Су кранын жабу', seen: 'су краны',
     hint: 'Тіс тазалап немесе ыдыс жуып жатқанда суды ағызып қойма: кранды жап.',
@@ -751,7 +742,7 @@ const QUESTS = [
     prompts: ['a photo of a light switch', 'a photo of a hand turning off a light', 'a photo of a switched off lamp', 'a photo of a dark room with the light off'] }
 ];
 
-/* Тапсырмаға қатысы жоқ топтар: CLIP-те олар да «бәсекелес» болады, сондықтан кездейсоқ сурет өтіп кетпейді */
+
 const OTHER_GROUPS = [
   { key: 'person', seen: 'адам (портрет не отырған адам)',
     prompts: ['a photo of a person sitting on a chair', 'a selfie of a person', 'a portrait of a face', 'a photo of a person sitting at a desk'] },
@@ -772,7 +763,7 @@ const Quests = {
     state.done = new Set((data || []).map(r => r.quest_key));
   },
 
-  /** instant: true болса, карточкалар анимациясыз бірден көрінеді (суреттен кейінгі жаңарту) */
+
   render(instant = false) {
     $('#quests-total').textContent = QUESTS.length;
     $('#stat-total').textContent = QUESTS.length;
@@ -854,9 +845,7 @@ const Quests = {
   }
 };
 
-/* ---------- AI Anti-Cheat: дубликат тексеру ----------
-   SHA-256 (дәл көшірме) және dHash (өлшемі өзгерген көшірме) серверде барлық
-   қолданушылар бойынша салыстырылады. Мазмұнды тексеруді төмендегі Vision жасайды. */
+
 const AntiCheat = {
   MAX_BYTES: 12 * 1024 * 1024,
   MIN_SIDE: 300,
@@ -884,7 +873,7 @@ const AntiCheat = {
     const digest = await crypto.subtle.digest('SHA-256', buf);
     const sha = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // dHash: 9×8 сұр масштаб, көрші пикселдерді салыстыру → 64 бит
+   
     const c = document.createElement('canvas'); c.width = 9; c.height = 8;
     const ctx = c.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(bmp, 0, 0, 9, 8);
@@ -898,19 +887,14 @@ const AntiCheat = {
   }
 };
 
-/* ---------- Vision: суреттің мазмұнын тексеру ----------
-   CLIP моделі (Transformers.js) браузердің ішінде жұмыс істейді: сурет серверге кетпейді,
-   API кілті керек емес. Модель суретті барлық топтың сипаттамаларымен салыстырады.
-   Тапсырманың өз тобы жеңсе және ұпайы шектен асса ғана сурет өтеді.
-   Шектерді (MIN_SCORE) консольдегі кестеге қарап реттеуге болады. */
-/* SCORING:START */
+
 const SCORING = {
   MIN_SCORE: 0.35,
   groups(questKey) {
     const all = [...QUESTS.map(q => ({ key: q.key, seen: q.seen, prompts: q.prompts })), ...OTHER_GROUPS];
     return all;
   },
-  /** out: [{label, score}], нәтиже: {ok, top, seen, table} */
+ 
   judge(out, questKey) {
     const groups = this.groups(questKey);
     const owner = new Map();
@@ -931,7 +915,7 @@ const SCORING = {
     };
   }
 };
-/* SCORING:END */
+
 
 const Vision = {
   VERSION: '2.17.2',
@@ -969,7 +953,7 @@ const Vision = {
     if (this.listener) this.listener(pct);
   },
 
-  /** Тапсырмалар бетін ашқанда модельді фонда алдын ала жүктейді */
+
   warm() {
     const c = navigator.connection;
     if (c && (c.saveData || c.type === 'cellular')) return;
@@ -991,7 +975,7 @@ const Vision = {
   }
 };
 
-/* ---------- Scan (модал) ---------- */
+
 const Scan = {
   opener: null,
 
@@ -1037,7 +1021,7 @@ const Scan = {
   }
 };
 
-/* ---------- Leaderboard ---------- */
+
 const Leaderboard = {
   async load() {
     const body = $('#lb-body'), foot = $('#lb-foot');
@@ -1078,7 +1062,7 @@ const Leaderboard = {
   }
 };
 
-/* ---------- Router ---------- */
+
 const ROUTES = [
   { id: 'home',        label: 'Басты бет',   icon: 'home' },
   { id: 'quests',      label: 'Тапсырмалар', icon: 'quests' },
@@ -1116,7 +1100,7 @@ const Router = {
   }
 };
 
-/* ---------- App ---------- */
+
 const App = {
   show(view) {
     $('#boot').classList.add('hidden');
